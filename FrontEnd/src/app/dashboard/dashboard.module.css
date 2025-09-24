@@ -1,0 +1,1057 @@
+/* Dashboard Styles */
+.dashboard {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fffe 0%, #f0fdf4 50%, #ecfdf5 100%);
+}
+
+/* Header */
+.header {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.headerContent {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 4rem;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logoIcon {
+  background-color: #16a34a;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoText {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.headerCenter {
+  flex: 1;
+  text-align: center;
+}
+
+.welcomeText {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.farmInfo {
+  color: #6b7280;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.navigation {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.navButton:hover {
+  background-color: #f3f4f6;
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+.headerButton {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.headerButton:hover {
+  background-color: #f3f4f6;
+  color: #16a34a;
+}
+
+.notificationBadge {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  background-color: #ef4444;
+  color: white;
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 0.125rem 0.25rem;
+  border-radius: 9999px;
+  min-width: 1rem;
+  height: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoutButton {
+  background-color: #16a34a;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.logoutButton:hover {
+  background-color: #15803d;
+}
+
+/* Main Layout */
+.main {
+  padding: 2rem 0;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Stats Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.statCard {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  position: relative;
+  overflow: hidden;
+}
+
+.statCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: currentColor;
+}
+
+.statCard.green::before {
+  background: #16a34a;
+}
+
+.statCard.blue::before {
+  background: #2563eb;
+}
+
+.statCard.orange::before {
+  background: #ea580c;
+}
+
+.statCard.purple::before {
+  background: #9333ea;
+}
+
+.statHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.statIcon {
+  width: 2rem;
+  height: 2rem;
+  color: currentColor;
+}
+
+.green .statIcon {
+  color: #16a34a;
+}
+
+.blue .statIcon {
+  color: #2563eb;
+}
+
+.orange .statIcon {
+  color: #ea580c;
+}
+
+.purple .statIcon {
+  color: #9333ea;
+}
+
+.statTrend {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.statContent {
+  text-align: left;
+}
+
+.statValue {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.25rem 0;
+}
+
+.statTitle {
+  color: #6b7280;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Dashboard Grid */
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 2rem;
+}
+
+@media (max-width: 1024px) {
+  .dashboardGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mainColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Chart Container */
+.chartContainer {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+}
+
+.chartTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 1rem 0;
+}
+
+.cropList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cropItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.cropInfo {
+  flex: 1;
+}
+
+.cropName {
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.25rem;
+}
+
+.cropDetails {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.cropHealth {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.healthScore {
+  font-weight: 600;
+  color: #111827;
+  min-width: 3rem;
+  text-align: right;
+}
+
+.healthBar {
+  width: 6rem;
+  height: 0.5rem;
+  background: #e5e7eb;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.healthProgress {
+  height: 100%;
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.alertIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #ea580c;
+}
+
+.successIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #16a34a;
+}
+
+/* Activity Feed */
+.activityFeed {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+}
+
+.sectionTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 1rem 0;
+}
+
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.activityItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.activityItem:hover {
+  background-color: #f9fafb;
+}
+
+.activityIcon {
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  background: #f3f4f6;
+}
+
+.activityContent {
+  flex: 1;
+}
+
+.activityContent p {
+  margin: 0 0 0.25rem 0;
+  color: #111827;
+  font-size: 0.875rem;
+}
+
+.activityTime {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Weather Widget */
+.weatherWidget {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+}
+
+.widgetTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 1rem 0;
+}
+
+.weatherGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.weatherItem {
+  text-align: center;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.weatherIcon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #16a34a;
+  margin: 0 auto 0.5rem;
+}
+
+.weatherValue {
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.25rem;
+}
+
+.weatherLabel {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Farmers Widget */
+.farmersWidget {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+}
+
+.widgetHeader {
+  margin-bottom: 1rem;
+}
+
+.searchBox {
+  position: relative;
+  margin-top: 0.75rem;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: #6b7280;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.5rem 0.75rem 0.5rem 2.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.searchInput:focus {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+.farmersList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.farmerItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.farmerItem:hover {
+  background-color: #f9fafb;
+  border-color: #16a34a;
+}
+
+.farmerAvatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.farmerInfo {
+  flex: 1;
+}
+
+.farmerName {
+  font-weight: 600;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.statusDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.statusDot.online {
+  background-color: #16a34a;
+}
+
+.statusDot.offline {
+  background-color: #6b7280;
+}
+
+.farmerDetails {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.locationIcon {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.farmerCrops {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.messageButton {
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.messageButton:hover {
+  background-color: #16a34a;
+  border-color: #16a34a;
+  color: white;
+}
+
+/* Floating Action Button */
+.fab {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 3.5rem;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 10px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  z-index: 50;
+}
+
+.fab:hover {
+  background-color: #15803d;
+  transform: scale(1.1);
+}
+
+/* Dialog */
+.dialogOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
+}
+
+.dialogContent {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 28rem;
+  position: relative;
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.25);
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.dialogTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: color 0.2s ease;
+}
+
+.closeButton:hover {
+  color: #111827;
+}
+
+.actionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.actionButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #374151;
+}
+
+.actionButton:hover {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.actionButton span {
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Profile Modal Form Styles */
+.profileForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.formLabel {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.formInput {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.formInput:focus {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+.formInput:disabled {
+  background-color: #f9fafb;
+  color: #6b7280;
+}
+
+.cropTypesContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background-color: #f9fafb;
+  min-height: 42px;
+  align-items: center;
+}
+
+.cropTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  background-color: #dcfce7;
+  color: #16a34a;
+  font-size: 0.75rem;
+  border-radius: 9999px;
+}
+
+.cropTagRemove {
+  margin-left: 0.25rem;
+  color: #16a34a;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.cropTagRemove:hover {
+  color: #15803d;
+}
+
+.cropSelect {
+  font-size: 0.75rem;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.profileActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1rem;
+}
+
+.profileButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.profileButtonPrimary {
+  background-color: #16a34a;
+  color: white;
+  border: none;
+}
+
+.profileButtonPrimary:hover {
+  background-color: #15803d;
+}
+
+.profileButtonSecondary {
+  background: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.profileButtonSecondary:hover {
+  background-color: #f9fafb;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .headerContent {
+    padding: 0 1rem;
+  }
+
+  .container {
+    padding: 0 1rem;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .welcomeText {
+    font-size: 1.25rem;
+  }
+
+  .farmInfo {
+    display: none;
+  }
+
+  .weatherGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actionGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+
+  .navigation {
+    display: none;
+  }
+}
+
+/* Notifications Dropdown */
+.notificationsDropdown {
+  position: fixed;
+  top: 4rem;
+  right: 1rem;
+  width: 20rem;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.25);
+  border: 1px solid #e5e7eb;
+  z-index: 50;
+  max-height: 24rem;
+  overflow: hidden;
+}
+
+.notificationsHeader {
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notificationsTitle {
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.notificationsCloseButton {
+  color: #9ca3af;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.notificationsCloseButton:hover {
+  color: #6b7280;
+}
+
+.notificationsList {
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.notificationsEmpty {
+  padding: 1.5rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.notificationsEmptyIcon {
+  width: 2rem;
+  height: 2rem;
+  color: #d1d5db;
+  margin: 0 auto 0.5rem;
+}
+
+.notificationsItems {
+  border-top: 1px solid #f3f4f6;
+}
+
+.notificationItem {
+  padding: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.notificationItem:hover {
+  background-color: #f9fafb;
+}
+
+.notificationItem:last-child {
+  border-bottom: none;
+}
+
+.notificationItemUnread {
+  background-color: #ecfdf5;
+  border-left: 4px solid #16a34a;
+}
+
+.notificationContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.notificationDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  margin-top: 0.5rem;
+  flex-shrink: 0;
+}
+
+.notificationDotCompleted {
+  background-color: #10b981;
+}
+
+.notificationDotScheduled {
+  background-color: #3b82f6;
+}
+
+.notificationDotDetected {
+  background-color: #ef4444;
+}
+
+.notificationDotAlert {
+  background-color: #f59e0b;
+}
+
+.notificationDotDefault {
+  background-color: #9ca3af;
+}
+
+.notificationText {
+  flex: 1;
+  min-width: 0;
+}
+
+.notificationTitle {
+  font-weight: 500;
+  color: #111827;
+  font-size: 0.875rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.notificationMessage {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0.25rem 0;
+}
+
+.notificationTime {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.notificationsFooter {
+  padding: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+.notificationsViewAll {
+  font-size: 0.875rem;
+  color: #16a34a;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  background: none;
+  border: none;
+}
+
+.notificationsViewAll:hover {
+  color: #15803d;
+}
+
+@media (max-width: 640px) {
+  .headerCenter {
+    display: none;
+  }
+
+  .fab {
+    bottom: 1rem;
+    right: 1rem;
+    width: 3rem;
+    height: 3rem;
+  }
+}

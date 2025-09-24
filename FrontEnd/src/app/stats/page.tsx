@@ -7,14 +7,18 @@ import {
   TrendingDown,
   Download,
   Calendar,
-  Pie,
+  PieChart,
   Activity,
   AlertTriangle,
   CheckCircle,
   Home,
   ArrowLeft,
 } from "lucide-react";
-import { CropDataManager, CropStats, CropAnalysisResult } from "../utils/cropDataManager";
+import {
+  CropDataManager,
+  CropStats,
+  CropAnalysisResult,
+} from "../utils/cropDataManager";
 import styles from "./stats.module.css";
 
 interface Farmer {
@@ -28,9 +32,13 @@ interface Farmer {
 export default function StatsPage() {
   const [currentUser, setCurrentUser] = useState<Farmer | null>(null);
   const [stats, setStats] = useState<CropStats | null>(null);
-  const [analysisResults, setAnalysisResults] = useState<CropAnalysisResult[]>([]);
+  const [analysisResults, setAnalysisResults] = useState<CropAnalysisResult[]>(
+    []
+  );
   const [diseaseStats, setDiseaseStats] = useState<Record<string, number>>({});
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'7' | '30' | '90'>('30');
+  const [selectedTimeframe, setSelectedTimeframe] = useState<"7" | "30" | "90">(
+    "30"
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -48,7 +56,10 @@ export default function StatsPage() {
 
   const loadStatsData = (userId: string) => {
     const userStats = CropDataManager.getStats(userId);
-    const recentResults = CropDataManager.getRecentAnalysisResults(userId, parseInt(selectedTimeframe));
+    const recentResults = CropDataManager.getRecentAnalysisResults(
+      userId,
+      parseInt(selectedTimeframe)
+    );
     const diseases = CropDataManager.getDiseaseStats(userId);
 
     setStats(userStats);
@@ -77,7 +88,7 @@ export default function StatsPage() {
       };
 
       // Convert to PDF using browser's print functionality
-      const printWindow = window.open('', '_blank');
+      const printWindow = window.open("", "_blank");
       if (!printWindow) return;
 
       printWindow.document.write(`
@@ -136,46 +147,71 @@ export default function StatsPage() {
 
           <div class="section">
             <h2>📊 Health Trends</h2>
-            ${stats.trendsData.map(trend => `
+            ${stats.trendsData
+              .map(
+                (trend) => `
               <div class="trend-item">
                 <span>${new Date(trend.date).toLocaleDateString()}</span>
                 <span>${trend.healthScore}% (${trend.scansCount} scans)</span>
               </div>
-            `).join('')}
+            `
+              )
+              .join("")}
           </div>
 
           <div class="section">
             <h2>🦠 Disease Statistics</h2>
-            ${Object.entries(diseaseStats).length > 0 ?
-              Object.entries(diseaseStats).map(([disease, count]) => `
+            ${
+              Object.entries(diseaseStats).length > 0
+                ? Object.entries(diseaseStats)
+                    .map(
+                      ([disease, count]) => `
                 <div class="disease-item">
                   <span>${disease}</span>
                   <span>${count} occurrences</span>
                 </div>
-              `).join('') :
-              '<p>No diseases detected in this period</p>'
+              `
+                    )
+                    .join("")
+                : "<p>No diseases detected in this period</p>"
             }
           </div>
 
           <div class="section">
             <h2>🔍 Recent Analysis Results</h2>
-            ${analysisResults.slice(0, 10).map(result => `
+            ${analysisResults
+              .slice(0, 10)
+              .map(
+                (result) => `
               <div class="analysis-item">
                 <div class="analysis-header">
                   <strong>${result.cropType}</strong>
-                  <span class="${result.diseaseDetected ? 'diseased' : 'healthy'}">
-                    ${result.diseaseDetected ? '⚠️ ' + (result.diseaseName || 'Disease Detected') : '✅ Healthy'}
+                  <span class="${
+                    result.diseaseDetected ? "diseased" : "healthy"
+                  }">
+                    ${
+                      result.diseaseDetected
+                        ? "⚠️ " + (result.diseaseName || "Disease Detected")
+                        : "✅ Healthy"
+                    }
                   </span>
                 </div>
                 <p><strong>Health Score:</strong> ${result.healthScore}%</p>
-                <p><strong>Date:</strong> ${new Date(result.analysisDate).toLocaleDateString()}</p>
+                <p><strong>Date:</strong> ${new Date(
+                  result.analysisDate
+                ).toLocaleDateString()}</p>
                 <p><strong>Area:</strong> ${result.area} acres</p>
-                ${result.recommendations.length > 0 ?
-                  '<p><strong>Recommendations:</strong> ' + result.recommendations.join('; ') + '</p>' :
-                  ''
+                ${
+                  result.recommendations.length > 0
+                    ? "<p><strong>Recommendations:</strong> " +
+                      result.recommendations.join("; ") +
+                      "</p>"
+                    : ""
                 }
               </div>
-            `).join('')}
+            `
+              )
+              .join("")}
           </div>
 
           <div class="section">
@@ -194,10 +230,9 @@ export default function StatsPage() {
         printWindow.print();
         printWindow.close();
       }, 500);
-
     } catch (error) {
-      console.error('PDF generation failed:', error);
-      alert('Failed to generate PDF report. Please try again.');
+      console.error("PDF generation failed:", error);
+      alert("Failed to generate PDF report. Please try again.");
     }
   };
 
@@ -217,9 +252,11 @@ export default function StatsPage() {
       <div className={styles.container}>
         <div className={styles.error}>
           <h2>No Data Available</h2>
-          <p>No crop analysis data found. Start scanning crops to see statistics.</p>
+          <p>
+            No crop analysis data found. Start scanning crops to see statistics.
+          </p>
           <button
-            onClick={() => window.location.href = '/crop-analyzer'}
+            onClick={() => (window.location.href = "/crop-analyzer")}
             className={styles.primaryButton}
           >
             Start Analyzing Crops
@@ -229,7 +266,10 @@ export default function StatsPage() {
     );
   }
 
-  const healthPercentage = stats.totalScans > 0 ? Math.round((stats.healthyScans / stats.totalScans) * 100) : 0;
+  const healthPercentage =
+    stats.totalScans > 0
+      ? Math.round((stats.healthyScans / stats.totalScans) * 100)
+      : 0;
 
   return (
     <div className={styles.container}>
@@ -238,7 +278,7 @@ export default function StatsPage() {
         <div className={styles.headerContent}>
           <div className={styles.headerLeft}>
             <button
-              onClick={() => window.location.href = '/dashboard'}
+              onClick={() => (window.location.href = "/dashboard")}
               className={styles.backButton}
             >
               <ArrowLeft className="w-4 h-4" />
@@ -253,18 +293,18 @@ export default function StatsPage() {
           </div>
           <div className={styles.headerActions}>
             <select
+              title="Select timeframe"
               value={selectedTimeframe}
-              onChange={(e) => setSelectedTimeframe(e.target.value as '7' | '30' | '90')}
+              onChange={(e) =>
+                setSelectedTimeframe(e.target.value as "7" | "30" | "90")
+              }
               className={styles.timeframeSelect}
             >
               <option value="7">Last 7 days</option>
               <option value="30">Last 30 days</option>
               <option value="90">Last 90 days</option>
             </select>
-            <button
-              onClick={downloadPDF}
-              className={styles.downloadButton}
-            >
+            <button onClick={downloadPDF} className={styles.downloadButton}>
               <Download className="w-4 h-4" />
               Download PDF
             </button>
@@ -282,8 +322,9 @@ export default function StatsPage() {
               <span className={styles.statTrend}>
                 {stats.trendsData.length > 1 &&
                   (stats.trendsData[stats.trendsData.length - 1].scansCount >
-                   stats.trendsData[stats.trendsData.length - 2].scansCount ? '+' : '')
-                }
+                  stats.trendsData[stats.trendsData.length - 2].scansCount
+                    ? "+"
+                    : "")}
               </span>
             </div>
             <div className={styles.statContent}>
@@ -306,7 +347,9 @@ export default function StatsPage() {
           <div className={styles.statCard}>
             <div className={styles.statHeader}>
               <AlertTriangle className="w-6 h-6 text-red-600" />
-              <span className={styles.statTrend}>{100 - healthPercentage}%</span>
+              <span className={styles.statTrend}>
+                {100 - healthPercentage}%
+              </span>
             </div>
             <div className={styles.statContent}>
               <h3 className={styles.statValue}>{stats.diseasedScans}</h3>
@@ -340,9 +383,14 @@ export default function StatsPage() {
                       style={{ height: `${(trend.healthScore / 100) * 120}px` }}
                     />
                     <span className={styles.trendDate}>
-                      {new Date(trend.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                      {new Date(trend.date).toLocaleDateString("en", {
+                        month: "short",
+                        day: "numeric",
+                      })}
                     </span>
-                    <span className={styles.trendValue}>{trend.healthScore}%</span>
+                    <span className={styles.trendValue}>
+                      {trend.healthScore}%
+                    </span>
                   </div>
                 ))}
               </div>
@@ -368,7 +416,10 @@ export default function StatsPage() {
                       <div
                         className={styles.diseaseBarFill}
                         style={{
-                          width: `${(count / Math.max(...Object.values(diseaseStats))) * 100}%`
+                          width: `${
+                            (count / Math.max(...Object.values(diseaseStats))) *
+                            100
+                          }%`,
                         }}
                       />
                     </div>
@@ -403,7 +454,7 @@ export default function StatsPage() {
                       {result.diseaseDetected ? (
                         <span className={styles.statusDiseased}>
                           <AlertTriangle className="w-4 h-4" />
-                          {result.diseaseName || 'Disease'}
+                          {result.diseaseName || "Disease"}
                         </span>
                       ) : (
                         <span className={styles.statusHealthy}>
@@ -416,7 +467,9 @@ export default function StatsPage() {
                   <div className={styles.resultDetails}>
                     <div className={styles.resultMetric}>
                       <span>Health Score:</span>
-                      <span className={styles.healthScore}>{result.healthScore}%</span>
+                      <span className={styles.healthScore}>
+                        {result.healthScore}%
+                      </span>
                     </div>
                     <div className={styles.resultMetric}>
                       <span>Area:</span>
@@ -435,7 +488,7 @@ export default function StatsPage() {
               <Activity className="w-12 h-12 text-gray-400 mb-2" />
               <p>No analysis results in selected timeframe</p>
               <button
-                onClick={() => window.location.href = '/crop-analyzer'}
+                onClick={() => (window.location.href = "/crop-analyzer")}
                 className={styles.primaryButton}
               >
                 Start Analyzing

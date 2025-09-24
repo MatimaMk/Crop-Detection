@@ -1194,6 +1194,92 @@
   font-style: italic;
 }
 
+/* Location search specific styles */
+.locationContainer {
+  position: relative;
+}
+
+.locationButton {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  color: #666;
+  transition: color 0.2s ease;
+}
+
+.locationButton:hover {
+  color: #16a34a;
+  background-color: #f3f4f6;
+}
+
+.locationSuggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.locationSuggestion {
+  padding: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.15s ease;
+}
+
+.locationSuggestion:last-child {
+  border-bottom: none;
+}
+
+.locationSuggestion:hover {
+  background-color: #f9fafb;
+}
+
+.locationSuggestion:active {
+  background-color: #f3f4f6;
+}
+
+.locationSuggestionName {
+  font-weight: 600;
+  font-size: 14px;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.locationSuggestionDetails {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.locationLoading {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 12px;
+  z-index: 1000;
+  font-size: 12px;
+  color: #6b7280;
+  text-align: center;
+}
+
 .formError {
   color: #dc2626;
   font-size: 0.875rem;
@@ -1352,11 +1438,12 @@
 
 /* Animations */
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
-    opacity: .5;
+    opacity: 0.5;
   }
 }
 

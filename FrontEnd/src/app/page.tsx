@@ -1,6 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
+
+// Extend window object for timeout storage
+declare global {
+  interface Window {
+    locationSearchTimeout?: NodeJS.Timeout;
+  }
+}
 import {
   Leaf,
   Smartphone,
@@ -16,6 +23,7 @@ import {
   Clock,
   BarChart3,
   Users,
+  MapPin,
 } from "lucide-react";
 import styles from "./page.module.css";
 
@@ -62,6 +70,22 @@ export default function CropDiseaseLanding() {
         console.error('Error loading users from localStorage:', error);
       }
     }
+
+    // Add click outside handler for location suggestions
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('[data-location-container]')) {
+        setShowLocationSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (window.locationSearchTimeout) {
+        clearTimeout(window.locationSearchTimeout);
+      }
+    };
   }, []);
 
   // Login form state
@@ -78,6 +102,9 @@ export default function CropDiseaseLanding() {
     experienceYears: "",
     phone: "",
   });
+  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [registerError, setRegisterError] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
@@ -85,6 +112,96 @@ export default function CropDiseaseLanding() {
   const validateEmail = (email: string) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
+  };
+
+  // Location search function
+  const searchLocations = async (query: string) => {
+    if (query.length < 2) {
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+      return;
+    }
+
+    setIsLoadingLocations(true);
+    try {
+      const response = await fetch(`/api/location?q=${encodeURIComponent(query)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setLocationSuggestions(data.locations || []);
+        setShowLocationSuggestions(true);
+      } else {
+        setLocationSuggestions([]);
+        setShowLocationSuggestions(false);
+      }
+    } catch (error) {
+      console.error('Failed to search locations:', error);
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+    } finally {
+      setIsLoadingLocations(false);
+    }
+  };
+
+  // Handle location input change with debouncing
+  const handleLocationChange = (value: string) => {
+    setRegisterForm({ ...registerForm, location: value });
+
+    // Clear previous timeout
+    if (window.locationSearchTimeout) {
+      clearTimeout(window.locationSearchTimeout);
+    }
+
+    // Set new timeout
+    window.locationSearchTimeout = setTimeout(() => {
+      searchLocations(value);
+    }, 300);
+  };
+
+  // Handle location selection from suggestions
+  const handleLocationSelect = (location: any) => {
+    setRegisterForm({ ...registerForm, location: location.displayName });
+    setShowLocationSuggestions(false);
+    setLocationSuggestions([]);
+  };
+
+  // Get user's current location
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const response = await fetch('/api/location', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              lat: latitude,
+              lon: longitude,
+            }),
+          });
+
+          if (response.ok) {
+            const locationData = await response.json();
+            setRegisterForm({ ...registerForm, location: locationData.displayName });
+          } else {
+            alert('Failed to get location details. Please enter manually.');
+          }
+        } catch (error) {
+          console.error('Error getting location details:', error);
+          alert('Failed to get location details. Please enter manually.');
+        }
+      },
+      (error) => {
+        console.error('Error getting current position:', error);
+        alert('Unable to get your current location. Please enter manually.');
+      }
+    );
   };
 
   const handleLogin = (e?: React.FormEvent) => {
@@ -995,18 +1112,114 @@ export default function CropDiseaseLanding() {
               <label htmlFor="register-location" className={styles.formLabel}>
                 Location *
               </label>
-              <input
-                id="register-location"
-                type="text"
-                placeholder="City, State/Country"
-                value={registerForm.location}
-                onChange={(e) =>
-                  setRegisterForm({ ...registerForm, location: e.target.value })
-                }
-                className={styles.formInput}
-                required
-                aria-describedby={registerError ? "register-error" : undefined}
-              />
+              <div style={{ position: 'relative' }} data-location-container>
+                <input
+                  id="register-location"
+                  type="text"
+                  placeholder="Start typing city name..."
+                  value={registerForm.location}
+                  onChange={(e) => handleLocationChange(e.target.value)}
+                  onFocus={() => {
+                    if (locationSuggestions.length > 0) {
+                      setShowLocationSuggestions(true);
+                    }
+                  }}
+                  className={styles.formInput}
+                  required
+                  aria-describedby={registerError ? "register-error" : "location-help"}
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={getCurrentLocation}
+                  className={styles.locationButton}
+                  title="Use my current location"
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    color: '#666'
+                  }}
+                >
+                  <MapPin className="w-4 h-4" />
+                </button>
+
+                {/* Location suggestions dropdown */}
+                {showLocationSuggestions && locationSuggestions.length > 0 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: '0',
+                      right: '0',
+                      background: 'white',
+                      border: '1px solid #ddd',
+                      borderTop: 'none',
+                      borderRadius: '0 0 4px 4px',
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      zIndex: 1000,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    {locationSuggestions.map((location, index) => (
+                      <div
+                        key={index}
+                        onClick={() => handleLocationSelect(location)}
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          borderBottom: index < locationSuggestions.length - 1 ? '1px solid #eee' : 'none'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f5f5f5';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                        }}
+                      >
+                        <div style={{ fontWeight: 'bold', fontSize: '14px' }}>
+                          {location.name}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          {location.state && `${location.state}, `}{location.country}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Loading indicator */}
+                {isLoadingLocations && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: '0',
+                      right: '0',
+                      background: 'white',
+                      border: '1px solid #ddd',
+                      borderTop: 'none',
+                      borderRadius: '0 0 4px 4px',
+                      padding: '8px 12px',
+                      zIndex: 1000,
+                      fontSize: '12px',
+                      color: '#666'
+                    }}
+                  >
+                    Searching locations...
+                  </div>
+                )}
+              </div>
+              <small id="location-help" className={styles.helpText}>
+                Type your city name or click the location icon to use GPS
+              </small>
             </div>
             <div className={styles.formGroup}>
               <label htmlFor="register-farm-size" className={styles.formLabel}>

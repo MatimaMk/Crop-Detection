@@ -35,13 +35,18 @@ interface ScheduledScan {
     address: string;
   };
   notes?: string;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: "pending" | "completed" | "cancelled";
   createdAt: string;
 }
 
 interface Notification {
   id: string;
-  type: 'scan_scheduled' | 'scan_reminder' | 'scan_completed' | 'disease_detected' | 'weather_alert';
+  type:
+    | "scan_scheduled"
+    | "scan_reminder"
+    | "scan_completed"
+    | "disease_detected"
+    | "weather_alert";
   title: string;
   message: string;
   timestamp: string;
@@ -56,25 +61,25 @@ export default function SchedulePage() {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingScan, setEditingScan] = useState<ScheduledScan | null>(null);
   const [scheduleForm, setScheduleForm] = useState({
-    cropType: '',
-    date: '',
-    time: '',
-    location: '',
+    cropType: "",
+    date: "",
+    time: "",
+    location: "",
     lat: 0,
     lng: 0,
-    notes: '',
+    notes: "",
   });
 
   useEffect(() => {
     // Load user data from localStorage
-    const userData = localStorage.getItem('currentUser');
+    const userData = localStorage.getItem("currentUser");
     if (userData) {
       const user = JSON.parse(userData);
       setCurrentUser(user);
       loadUserData(user.id);
     } else {
       // Redirect to login if no user data
-      window.location.href = '/';
+      window.location.href = "/";
     }
   }, []);
 
@@ -92,7 +97,9 @@ export default function SchedulePage() {
     }
   };
 
-  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>) => {
+  const addNotification = (
+    notification: Omit<Notification, "id" | "timestamp" | "isRead">
+  ) => {
     if (!currentUser) return;
 
     const newNotification: Notification = {
@@ -104,11 +111,19 @@ export default function SchedulePage() {
 
     const updatedNotifications = [newNotification, ...notifications];
     setNotifications(updatedNotifications);
-    localStorage.setItem(`notifications_${currentUser.id}`, JSON.stringify(updatedNotifications));
+    localStorage.setItem(
+      `notifications_${currentUser.id}`,
+      JSON.stringify(updatedNotifications)
+    );
   };
 
   const handleScheduleScan = () => {
-    if (!currentUser || !scheduleForm.cropType || !scheduleForm.date || !scheduleForm.time) {
+    if (
+      !currentUser ||
+      !scheduleForm.cropType ||
+      !scheduleForm.date ||
+      !scheduleForm.time
+    ) {
       return;
     }
 
@@ -117,25 +132,27 @@ export default function SchedulePage() {
       scheduledDate: scheduleForm.date,
       scheduledTime: scheduleForm.time,
       location: {
-        lat: scheduleForm.lat || -25.7479 + (Math.random() * 0.1),
-        lng: scheduleForm.lng || 28.2293 + (Math.random() * 0.1),
-        address: scheduleForm.location || 'Farm Location',
+        lat: scheduleForm.lat || -25.7479 + Math.random() * 0.1,
+        lng: scheduleForm.lng || 28.2293 + Math.random() * 0.1,
+        address: scheduleForm.location || "Farm Location",
       },
       notes: scheduleForm.notes,
-      status: 'pending' as const,
+      status: "pending" as const,
       createdAt: new Date().toISOString(),
     };
 
     let updatedScans;
     if (editingScan) {
       // Update existing scan
-      updatedScans = scheduledScans.map(scan =>
+      updatedScans = scheduledScans.map((scan) =>
         scan.id === editingScan.id ? { ...scan, ...scanData } : scan
       );
       addNotification({
-        type: 'scan_scheduled',
-        title: 'Scan Updated',
-        message: `${scheduleForm.cropType} scan updated for ${new Date(scheduleForm.date).toLocaleDateString()} at ${scheduleForm.time}`,
+        type: "scan_scheduled",
+        title: "Scan Updated",
+        message: `${scheduleForm.cropType} scan updated for ${new Date(
+          scheduleForm.date
+        ).toLocaleDateString()} at ${scheduleForm.time}`,
         relatedScanId: editingScan.id,
       });
     } else {
@@ -146,25 +163,30 @@ export default function SchedulePage() {
       };
       updatedScans = [...scheduledScans, newScan];
       addNotification({
-        type: 'scan_scheduled',
-        title: 'Scan Scheduled Successfully',
-        message: `${scheduleForm.cropType} scan scheduled for ${new Date(scheduleForm.date).toLocaleDateString()} at ${scheduleForm.time}`,
+        type: "scan_scheduled",
+        title: "Scan Scheduled Successfully",
+        message: `${scheduleForm.cropType} scan scheduled for ${new Date(
+          scheduleForm.date
+        ).toLocaleDateString()} at ${scheduleForm.time}`,
         relatedScanId: newScan.id,
       });
     }
 
     setScheduledScans(updatedScans);
-    localStorage.setItem(`scheduledScans_${currentUser.id}`, JSON.stringify(updatedScans));
+    localStorage.setItem(
+      `scheduledScans_${currentUser.id}`,
+      JSON.stringify(updatedScans)
+    );
 
     // Reset form
     setScheduleForm({
-      cropType: '',
-      date: '',
-      time: '',
-      location: '',
+      cropType: "",
+      date: "",
+      time: "",
+      location: "",
       lat: 0,
       lng: 0,
-      notes: '',
+      notes: "",
     });
     setShowScheduleModal(false);
     setEditingScan(null);
@@ -179,7 +201,7 @@ export default function SchedulePage() {
       location: scan.location.address,
       lat: scan.location.lat,
       lng: scan.location.lng,
-      notes: scan.notes || '',
+      notes: scan.notes || "",
     });
     setShowScheduleModal(true);
   };
@@ -187,31 +209,37 @@ export default function SchedulePage() {
   const deleteScan = (scanId: string) => {
     if (!currentUser) return;
 
-    const updatedScans = scheduledScans.filter(scan => scan.id !== scanId);
+    const updatedScans = scheduledScans.filter((scan) => scan.id !== scanId);
     setScheduledScans(updatedScans);
-    localStorage.setItem(`scheduledScans_${currentUser.id}`, JSON.stringify(updatedScans));
+    localStorage.setItem(
+      `scheduledScans_${currentUser.id}`,
+      JSON.stringify(updatedScans)
+    );
 
     addNotification({
-      type: 'scan_reminder',
-      title: 'Scan Deleted',
-      message: 'A scheduled scan has been deleted.',
+      type: "scan_reminder",
+      title: "Scan Deleted",
+      message: "A scheduled scan has been deleted.",
     });
   };
 
   const completeScan = (scanId: string) => {
     if (!currentUser) return;
 
-    const updatedScans = scheduledScans.map(scan =>
-      scan.id === scanId ? { ...scan, status: 'completed' as const } : scan
+    const updatedScans = scheduledScans.map((scan) =>
+      scan.id === scanId ? { ...scan, status: "completed" as const } : scan
     );
     setScheduledScans(updatedScans);
-    localStorage.setItem(`scheduledScans_${currentUser.id}`, JSON.stringify(updatedScans));
+    localStorage.setItem(
+      `scheduledScans_${currentUser.id}`,
+      JSON.stringify(updatedScans)
+    );
 
-    const completedScan = scheduledScans.find(scan => scan.id === scanId);
+    const completedScan = scheduledScans.find((scan) => scan.id === scanId);
     if (completedScan) {
       addNotification({
-        type: 'scan_completed',
-        title: 'Scan Completed',
+        type: "scan_completed",
+        title: "Scan Completed",
         message: `${completedScan.cropType} scan has been completed successfully.`,
         relatedScanId: scanId,
       });
@@ -219,10 +247,16 @@ export default function SchedulePage() {
   };
 
   const upcomingScans = scheduledScans
-    .filter(scan => scan.status === 'pending')
-    .sort((a, b) => new Date(a.scheduledDate + 'T' + a.scheduledTime).getTime() - new Date(b.scheduledDate + 'T' + b.scheduledTime).getTime());
+    .filter((scan) => scan.status === "pending")
+    .sort(
+      (a, b) =>
+        new Date(a.scheduledDate + "T" + a.scheduledTime).getTime() -
+        new Date(b.scheduledDate + "T" + b.scheduledTime).getTime()
+    );
 
-  const completedScans = scheduledScans.filter(scan => scan.status === 'completed');
+  const completedScans = scheduledScans.filter(
+    (scan) => scan.status === "completed"
+  );
 
   return (
     <div className={styles.schedulePage}>
@@ -231,8 +265,9 @@ export default function SchedulePage() {
         <div className={styles.headerContent}>
           <div className={styles.headerLeft}>
             <button
-              onClick={() => window.location.href = '/dashboard'}
+              onClick={() => (window.location.href = "/dashboard")}
               className={styles.backButton}
+              aria-label="Go back to dashboard"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -242,7 +277,9 @@ export default function SchedulePage() {
               </div>
               <div className={styles.headerText}>
                 <h1 className={styles.pageTitle}>Schedule Management</h1>
-                <p className={styles.pageSubtitle}>Manage your crop scanning schedule</p>
+                <p className={styles.pageSubtitle}>
+                  Manage your crop scanning schedule
+                </p>
               </div>
             </div>
           </div>
@@ -250,13 +287,13 @@ export default function SchedulePage() {
             onClick={() => {
               setEditingScan(null);
               setScheduleForm({
-                cropType: '',
-                date: '',
-                time: '',
-                location: '',
+                cropType: "",
+                date: "",
+                time: "",
+                location: "",
                 lat: 0,
                 lng: 0,
-                notes: '',
+                notes: "",
               });
               setShowScheduleModal(true);
             }}
@@ -309,7 +346,9 @@ export default function SchedulePage() {
               {upcomingScans.length === 0 ? (
                 <div className={styles.emptyState}>
                   <Calendar className="w-16 h-16 text-gray-300" />
-                  <p className={styles.emptyText}>No upcoming scans scheduled</p>
+                  <p className={styles.emptyText}>
+                    No upcoming scans scheduled
+                  </p>
                   <button
                     onClick={() => setShowScheduleModal(true)}
                     className={styles.emptyButton}
@@ -329,18 +368,21 @@ export default function SchedulePage() {
                         <button
                           onClick={() => editScan(scan)}
                           className={styles.actionButton}
+                          aria-label={`Edit ${scan.cropType} scan`}
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => completeScan(scan.id)}
                           className={`${styles.actionButton} ${styles.completeButton}`}
+                          aria-label={`Mark ${scan.cropType} scan as complete`}
                         >
                           <CheckCircle className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => deleteScan(scan.id)}
                           className={`${styles.actionButton} ${styles.deleteButton}`}
+                          aria-label={`Delete ${scan.cropType} scan`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -351,7 +393,9 @@ export default function SchedulePage() {
                       <div className={styles.scanDetails}>
                         <div className={styles.scanDetail}>
                           <Calendar className="w-4 h-4 text-gray-500" />
-                          <span>{new Date(scan.scheduledDate).toLocaleDateString()}</span>
+                          <span>
+                            {new Date(scan.scheduledDate).toLocaleDateString()}
+                          </span>
                         </div>
                         <div className={styles.scanDetail}>
                           <Clock className="w-4 h-4 text-gray-500" />
@@ -387,7 +431,8 @@ export default function SchedulePage() {
                     <div className={styles.completedContent}>
                       <h4 className={styles.completedTitle}>{scan.cropType}</h4>
                       <p className={styles.completedDate}>
-                        {new Date(scan.scheduledDate).toLocaleDateString()} at {scan.scheduledTime}
+                        {new Date(scan.scheduledDate).toLocaleDateString()} at{" "}
+                        {scan.scheduledTime}
                       </p>
                     </div>
                   </div>
@@ -404,7 +449,7 @@ export default function SchedulePage() {
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
               <h2 className={styles.modalTitle}>
-                {editingScan ? 'Edit Scan' : 'Schedule New Scan'}
+                {editingScan ? "Edit Scan" : "Schedule New Scan"}
               </h2>
               <button
                 onClick={() => {
@@ -412,17 +457,34 @@ export default function SchedulePage() {
                   setEditingScan(null);
                 }}
                 className={styles.closeButton}
+                aria-label="Close modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={(e) => { e.preventDefault(); handleScheduleScan(); }}>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleScheduleScan();
+              }}
+            >
               <div className={styles.formGrid}>
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Crop Type</label>
+                  <label
+                    htmlFor="schedule-cropType"
+                    className={styles.formLabel}
+                  >
+                    Crop Type
+                  </label>
                   <select
+                    id="schedule-cropType"
                     value={scheduleForm.cropType}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, cropType: e.target.value })}
+                    onChange={(e) =>
+                      setScheduleForm({
+                        ...scheduleForm,
+                        cropType: e.target.value,
+                      })
+                    }
                     className={styles.formSelect}
                     required
                   >
@@ -438,22 +500,32 @@ export default function SchedulePage() {
                   </select>
                 </div>
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Date</label>
+                  <label htmlFor="schedule-date" className={styles.formLabel}>
+                    Date
+                  </label>
                   <input
+                    id="schedule-date"
                     type="date"
                     value={scheduleForm.date}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, date: e.target.value })}
-                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) =>
+                      setScheduleForm({ ...scheduleForm, date: e.target.value })
+                    }
+                    min={new Date().toISOString().split("T")[0]}
                     className={styles.formInput}
                     required
                   />
                 </div>
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Time</label>
+                  <label htmlFor="schedule-time" className={styles.formLabel}>
+                    Time
+                  </label>
                   <input
+                    id="schedule-time"
                     type="time"
                     value={scheduleForm.time}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, time: e.target.value })}
+                    onChange={(e) =>
+                      setScheduleForm({ ...scheduleForm, time: e.target.value })
+                    }
                     className={styles.formInput}
                     required
                   />
@@ -463,7 +535,12 @@ export default function SchedulePage() {
                   <input
                     type="text"
                     value={scheduleForm.location}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, location: e.target.value })}
+                    onChange={(e) =>
+                      setScheduleForm({
+                        ...scheduleForm,
+                        location: e.target.value,
+                      })
+                    }
                     placeholder="e.g., North Field, Section A"
                     className={styles.formInput}
                   />
@@ -473,7 +550,9 @@ export default function SchedulePage() {
                 <label className={styles.formLabel}>Notes (Optional)</label>
                 <textarea
                   value={scheduleForm.notes}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, notes: e.target.value })}
+                  onChange={(e) =>
+                    setScheduleForm({ ...scheduleForm, notes: e.target.value })
+                  }
                   placeholder="Any additional notes for the scan..."
                   rows={3}
                   className={styles.formTextarea}
@@ -492,11 +571,15 @@ export default function SchedulePage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!scheduleForm.cropType || !scheduleForm.date || !scheduleForm.time}
+                  disabled={
+                    !scheduleForm.cropType ||
+                    !scheduleForm.date ||
+                    !scheduleForm.time
+                  }
                   className={styles.saveButton}
                 >
                   <Save className="w-4 h-4" />
-                  <span>{editingScan ? 'Update Scan' : 'Schedule Scan'}</span>
+                  <span>{editingScan ? "Update Scan" : "Schedule Scan"}</span>
                 </button>
               </div>
             </form>

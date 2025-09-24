@@ -57,6 +57,13 @@ interface WeatherData {
   humidity: number;
   rainfall: number;
   sunlight: number;
+  description?: string;
+  windSpeed?: number;
+  pressure?: number;
+  location?: string;
+  country?: string;
+  icon?: string;
+  visibility?: number;
 }
 
 interface NearbyFarmer {
@@ -129,11 +136,74 @@ export default function Dashboard() {
 
       // Load or initialize user-specific data
       loadUserData(user.id);
+
+      // Load weather data from API for user's location
+      loadWeatherData(user.location, user.id);
     } else {
       // Redirect to login if no user data
       window.location.href = "/";
     }
   }, []);
+
+  const loadWeatherData = async (location: string, userId: string) => {
+    try {
+      const response = await fetch(`/api/weather?location=${encodeURIComponent(location)}`);
+
+      if (response.ok) {
+        const weatherData = await response.json();
+        setWeatherData(weatherData);
+        // Cache for 1 hour
+        const cacheData = {
+          data: weatherData,
+          timestamp: Date.now(),
+          expires: Date.now() + (60 * 60 * 1000) // 1 hour
+        };
+        localStorage.setItem(`weather_${userId}`, JSON.stringify(cacheData));
+      } else {
+        // Use cached data if API fails
+        const cachedWeather = localStorage.getItem(`weather_${userId}`);
+        if (cachedWeather) {
+          const cache = JSON.parse(cachedWeather);
+          if (cache.expires > Date.now()) {
+            setWeatherData(cache.data);
+            return;
+          }
+        }
+
+        // Fallback weather data
+        setWeatherData({
+          temperature: 22,
+          humidity: 60,
+          rainfall: 0,
+          sunlight: 8,
+          description: "Weather data unavailable",
+          location: location
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to load weather data:', error);
+
+      // Try cached data first
+      const cachedWeather = localStorage.getItem(`weather_${userId}`);
+      if (cachedWeather) {
+        const cache = JSON.parse(cachedWeather);
+        if (cache.expires > Date.now()) {
+          setWeatherData(cache.data);
+          return;
+        }
+      }
+
+      // Final fallback
+      setWeatherData({
+        temperature: 22,
+        humidity: 60,
+        rainfall: 0,
+        sunlight: 8,
+        description: "Weather data unavailable",
+        location: location
+      });
+    }
+  };
 
   const loadUserData = (userId: string) => {
     // Load crop data
@@ -141,28 +211,38 @@ export default function Dashboard() {
     if (savedCropData) {
       setCropData(JSON.parse(savedCropData));
     } else {
-      // Initialize with sample data if none exists
-      const defaultCropData = [
-        {
-          cropType: "Corn",
-          healthScore: 92,
-          lastScanned: "2 hours ago",
-          diseaseDetected: false,
-          area: 10.5,
-        },
-        {
-          cropType: "Wheat",
-          healthScore: 78,
-          lastScanned: "1 day ago",
-          diseaseDetected: true,
-          area: 8.2,
-        },
-      ];
-      setCropData(defaultCropData);
-      localStorage.setItem(
-        `cropData_${userId}`,
-        JSON.stringify(defaultCropData)
-      );
+      // Initialize with user's actual crops from their profile
+      const currentUserData = localStorage.getItem("currentUser");
+      if (currentUserData) {
+        const user = JSON.parse(currentUserData);
+        const userCrops = user.cropTypes || [];
+
+        // Create initial crop data based on user's crops
+        const defaultCropData = userCrops.slice(0, 3).map((crop: string, index: number) => ({
+          cropType: crop,
+          healthScore: 85 + Math.floor(Math.random() * 15), // 85-100
+          lastScanned: index === 0 ? "2 hours ago" : `${index + 1} days ago`,
+          diseaseDetected: Math.random() < 0.2, // 20% chance of disease
+          area: Math.round((user.farmSize / userCrops.length) * 10) / 10, // Distribute farm area
+        }));
+
+        // If user has no crops defined, use defaults
+        if (defaultCropData.length === 0) {
+          defaultCropData.push({
+            cropType: "Mixed Crops",
+            healthScore: 88,
+            lastScanned: "1 day ago",
+            diseaseDetected: false,
+            area: user.farmSize || 10,
+          });
+        }
+
+        setCropData(defaultCropData);
+        localStorage.setItem(
+          `cropData_${userId}`,
+          JSON.stringify(defaultCropData)
+        );
+      }
     }
 
     // Load scheduled scans
@@ -175,22 +255,6 @@ export default function Dashboard() {
     const savedNotifications = localStorage.getItem(`notifications_${userId}`);
     if (savedNotifications) {
       setNotifications(JSON.parse(savedNotifications));
-    }
-
-    // Load weather data or fetch from API
-    const savedWeather = localStorage.getItem("weatherData");
-    if (savedWeather) {
-      setWeatherData(JSON.parse(savedWeather));
-    } else {
-      // Set default weather data
-      const defaultWeather = {
-        temperature: 24,
-        humidity: 65,
-        rainfall: 12.5,
-        sunlight: 8.2,
-      };
-      setWeatherData(defaultWeather);
-      localStorage.setItem("weatherData", JSON.stringify(defaultWeather));
     }
 
     // Load nearby farmers
@@ -334,7 +398,19 @@ export default function Dashboard() {
 
   const WeatherWidget = () => (
     <div className={styles.weatherWidget}>
-      <h3 className={styles.widgetTitle}>Weather Conditions</h3>
+      <h3 className={styles.widgetTitle}>
+        Weather Conditions
+        {weatherData.location && (
+          <span className={styles.weatherLocation}>
+            📍 {weatherData.location}
+          </span>
+        )}
+      </h3>
+      {weatherData.description && (
+        <div className={styles.weatherDescription}>
+          {weatherData.description}
+        </div>
+      )}
       <div className={styles.weatherGrid}>
         <div className={styles.weatherItem}>
           <Thermometer className={styles.weatherIcon} />
@@ -357,6 +433,14 @@ export default function Dashboard() {
           <div className={styles.weatherLabel}>Sunlight</div>
         </div>
       </div>
+      {weatherData.windSpeed !== undefined && (
+        <div className={styles.weatherExtra}>
+          <span>🌪️ Wind: {weatherData.windSpeed} m/s</span>
+          {weatherData.pressure && (
+            <span>🔻 Pressure: {weatherData.pressure} hPa</span>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -426,7 +510,13 @@ export default function Dashboard() {
             </button>
           </div>
           <div className={styles.actionGrid}>
-            <button className={styles.actionButton} aria-label="Scan Crop">
+            <button
+              className={styles.actionButton}
+              onClick={() => {
+                window.location.href = "/crop-analyzer";
+              }}
+              aria-label="Scan Crop"
+            >
               <Camera className="w-6 h-6" />
               <span>Scan Crop</span>
             </button>

@@ -1,0 +1,605 @@
+/* Stats Page Styles */
+
+.container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.loading, .error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  background: white;
+  border-radius: 12px;
+  margin: 0 auto;
+  max-width: 500px;
+  padding: 40px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #10b981;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.header {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 8px;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.backButton:hover {
+  background: #e5e7eb;
+}
+
+.headerInfo .title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.headerInfo .subtitle {
+  margin: 4px 0 0 0;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.timeframeSelect {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.downloadButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.downloadButton:hover {
+  background: #059669;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Overview Cards */
+.overviewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.statCard {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.statHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.statTrend {
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.statContent .statValue {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  line-height: 1;
+}
+
+.statContent .statLabel {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 8px 0 0 0;
+}
+
+/* Charts */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.chartCard {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.chartTitle {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.trendChart {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  height: 200px;
+  padding: 0 10px;
+}
+
+.trendBar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 30px;
+}
+
+.trendBarFill {
+  width: 100%;
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  transition: height 0.3s ease;
+}
+
+.trendDate {
+  font-size: 10px;
+  color: #6b7280;
+  margin-top: 8px;
+  writing-mode: horizontal-tb;
+  transform: rotate(-45deg);
+  width: 60px;
+  text-align: center;
+}
+
+.trendValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 4px;
+}
+
+/* Disease Chart */
+.diseaseChart {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.diseaseItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.diseaseInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.diseaseName {
+  font-weight: 600;
+  color: #374151;
+}
+
+.diseaseCount {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.diseaseBar {
+  height: 8px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.diseaseBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* Empty States */
+.emptyChart, .emptyResults {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.emptyChart p, .emptyResults p {
+  margin: 0;
+}
+
+/* Results Section */
+.resultsSection {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.sectionTitle {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.resultsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.resultItem {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.resultHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.resultInfo .resultCrop {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.resultInfo .resultDate {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.statusHealthy, .statusDiseased {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.statusHealthy {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.statusDiseased {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.resultDetails {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+}
+
+.resultMetric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.resultMetric span:first-child {
+  color: #6b7280;
+}
+
+.resultMetric span:last-child {
+  font-weight: 600;
+  color: #374151;
+}
+
+.healthScore {
+  color: #10b981 !important;
+}
+
+.primaryButton {
+  padding: 12px 24px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 16px;
+  transition: background 0.2s;
+}
+
+.primaryButton:hover {
+  background: #059669;
+}
+
+/* Loading Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.statCard,
+.chartCard,
+.resultItem {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.statCard:nth-child(1) { animation-delay: 0.1s; }
+.statCard:nth-child(2) { animation-delay: 0.2s; }
+.statCard:nth-child(3) { animation-delay: 0.3s; }
+.statCard:nth-child(4) { animation-delay: 0.4s; }
+
+/* Enhanced Interactions */
+.trendBar:hover .trendValue {
+  font-weight: 700;
+  color: #10b981;
+}
+
+.diseaseItem:hover {
+  background: #f9fafb;
+  border-radius: 6px;
+  padding: 8px;
+  margin: -8px;
+  transition: all 0.2s ease;
+}
+
+.resultItem:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  transform: translateX(4px);
+  transition: all 0.2s ease;
+}
+
+/* Enhanced Status Indicators */
+.statusHealthy {
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  border: 1px solid #10b981;
+}
+
+.statusDiseased {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border: 1px solid #ef4444;
+}
+
+/* Print Styles */
+@media print {
+  .container {
+    background: white !important;
+    padding: 0 !important;
+  }
+
+  .downloadButton,
+  .backButton,
+  .timeframeSelect {
+    display: none !important;
+  }
+
+  .chartCard,
+  .statCard {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .headerContent {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .headerActions {
+    width: 100%;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .timeframeSelect,
+  .downloadButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .overviewGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .trendDate {
+    transform: none;
+    writing-mode: vertical-rl;
+    width: auto;
+    font-size: 9px;
+  }
+
+  .resultDetails {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .trendChart {
+    height: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  .overviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .statValue {
+    font-size: 2rem !important;
+  }
+
+  .headerInfo .title {
+    font-size: 24px;
+  }
+
+  .trendChart {
+    gap: 4px;
+  }
+
+  .trendBar {
+    min-width: 20px;
+  }
+
+  .diseaseChart {
+    gap: 12px;
+  }
+
+  .chartTitle {
+    font-size: 16px;
+  }
+
+  .resultItem {
+    padding: 12px;
+  }
+
+  .resultHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .downloadButton {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}
+
+/* Accessibility Enhancements */
+@media (prefers-reduced-motion: reduce) {
+  .statCard,
+  .chartCard,
+  .resultItem {
+    animation: none;
+  }
+
+  .trendBarFill,
+  .diseaseBarFill {
+    transition: none;
+  }
+}
+
+/* Focus States for Accessibility */
+.downloadButton:focus,
+.backButton:focus,
+.primaryButton:focus {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+}
+
+.timeframeSelect:focus {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+}

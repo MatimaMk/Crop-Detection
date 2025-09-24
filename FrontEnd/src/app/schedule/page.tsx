@@ -13,6 +13,15 @@ import {
   Trash2,
   CheckCircle,
   X,
+  Droplet,
+  Sprout,
+  Scissors,
+  Truck,
+  Zap,
+  Bug,
+  Activity,
+  AlertTriangle,
+  Camera,
 } from "lucide-react";
 import styles from "./schedule.module.css";
 
@@ -24,50 +33,61 @@ interface Farmer {
   location: string;
 }
 
-interface ScheduledScan {
+interface FarmActivity {
   id: string;
-  cropType: string;
+  activityType: 'scan' | 'watering' | 'fertilizing' | 'harvesting' | 'planting' | 'pest_control' | 'pruning' | 'maintenance';
+  cropType?: string;
   scheduledDate: string;
   scheduledTime: string;
+  duration?: number; // in minutes
   location: {
     lat: number;
     lng: number;
     address: string;
   };
   notes?: string;
-  status: "pending" | "completed" | "cancelled";
+  status: "pending" | "completed" | "cancelled" | "overdue";
+  priority: "low" | "medium" | "high";
+  weather_dependent?: boolean;
+  equipment_needed?: string[];
   createdAt: string;
 }
 
 interface Notification {
   id: string;
   type:
-    | "scan_scheduled"
-    | "scan_reminder"
-    | "scan_completed"
+    | "activity_scheduled"
+    | "activity_reminder"
+    | "activity_completed"
     | "disease_detected"
-    | "weather_alert";
+    | "weather_alert"
+    | "maintenance_due";
   title: string;
   message: string;
   timestamp: string;
   isRead: boolean;
-  relatedScanId?: string;
+  relatedActivityId?: string;
 }
 
 export default function SchedulePage() {
   const [currentUser, setCurrentUser] = useState<Farmer | null>(null);
-  const [scheduledScans, setScheduledScans] = useState<ScheduledScan[]>([]);
+  const [farmActivities, setFarmActivities] = useState<FarmActivity[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [editingScan, setEditingScan] = useState<ScheduledScan | null>(null);
+  const [editingActivity, setEditingActivity] = useState<FarmActivity | null>(null);
   const [scheduleForm, setScheduleForm] = useState({
+    activityType: "" as FarmActivity['activityType'] | "",
     cropType: "",
     date: "",
     time: "",
+    duration: 60,
     location: "",
     lat: 0,
     lng: 0,
     notes: "",
+    priority: "medium" as FarmActivity['priority'],
+    weather_dependent: false,
+    equipment_needed: [] as string[],
   });
 
   useEffect(() => {
@@ -84,16 +104,60 @@ export default function SchedulePage() {
   }, []);
 
   const loadUserData = (userId: string) => {
-    // Load scheduled scans
-    const savedScans = localStorage.getItem(`scheduledScans_${userId}`);
-    if (savedScans) {
-      setScheduledScans(JSON.parse(savedScans));
+    // Load farm activities (migrate from old scheduledScans if needed)
+    let activities: FarmActivity[] = [];
+
+    // First try to load new format
+    const savedActivities = localStorage.getItem(`farmActivities_${userId}`);
+    if (savedActivities) {
+      activities = JSON.parse(savedActivities);
+    } else {
+      // Migrate from old format
+      const savedScans = localStorage.getItem(`scheduledScans_${userId}`);
+      if (savedScans) {
+        const oldScans = JSON.parse(savedScans);
+        activities = oldScans.map((scan: any) => ({
+          ...scan,
+          activityType: 'scan' as const,
+          priority: 'medium' as const,
+          weather_dependent: false,
+        }));
+        // Save in new format
+        localStorage.setItem(`farmActivities_${userId}`, JSON.stringify(activities));
+        // Remove old format
+        localStorage.removeItem(`scheduledScans_${userId}`);
+      }
     }
+    setFarmActivities(activities);
 
     // Load notifications
     const savedNotifications = localStorage.getItem(`notifications_${userId}`);
     if (savedNotifications) {
       setNotifications(JSON.parse(savedNotifications));
+    }
+  };
+
+  // Helper function to get activity type icon and info
+  const getActivityInfo = (activityType: FarmActivity['activityType']) => {
+    switch (activityType) {
+      case 'scan':
+        return { icon: Camera, color: 'text-blue-600', bgColor: 'bg-blue-50', label: 'Crop Scan' };
+      case 'watering':
+        return { icon: Droplet, color: 'text-blue-500', bgColor: 'bg-blue-50', label: 'Watering' };
+      case 'fertilizing':
+        return { icon: Sprout, color: 'text-green-600', bgColor: 'bg-green-50', label: 'Fertilizing' };
+      case 'harvesting':
+        return { icon: Scissors, color: 'text-orange-600', bgColor: 'bg-orange-50', label: 'Harvesting' };
+      case 'planting':
+        return { icon: Sprout, color: 'text-emerald-600', bgColor: 'bg-emerald-50', label: 'Planting' };
+      case 'pest_control':
+        return { icon: Bug, color: 'text-red-600', bgColor: 'bg-red-50', label: 'Pest Control' };
+      case 'pruning':
+        return { icon: Scissors, color: 'text-purple-600', bgColor: 'bg-purple-50', label: 'Pruning' };
+      case 'maintenance':
+        return { icon: Zap, color: 'text-yellow-600', bgColor: 'bg-yellow-50', label: 'Maintenance' };
+      default:
+        return { icon: Activity, color: 'text-gray-600', bgColor: 'bg-gray-50', label: 'Activity' };
     }
   };
 
@@ -117,20 +181,22 @@ export default function SchedulePage() {
     );
   };
 
-  const handleScheduleScan = () => {
+  const handleScheduleActivity = () => {
     if (
       !currentUser ||
-      !scheduleForm.cropType ||
+      !scheduleForm.activityType ||
       !scheduleForm.date ||
       !scheduleForm.time
     ) {
       return;
     }
 
-    const scanData = {
+    const activityData: Omit<FarmActivity, 'id'> = {
+      activityType: scheduleForm.activityType,
       cropType: scheduleForm.cropType,
       scheduledDate: scheduleForm.date,
       scheduledTime: scheduleForm.time,
+      duration: scheduleForm.duration,
       location: {
         lat: scheduleForm.lat || -25.7479 + Math.random() * 0.1,
         lng: scheduleForm.lng || 28.2293 + Math.random() * 0.1,
@@ -138,124 +204,140 @@ export default function SchedulePage() {
       },
       notes: scheduleForm.notes,
       status: "pending" as const,
+      priority: scheduleForm.priority,
+      weather_dependent: scheduleForm.weather_dependent,
+      equipment_needed: scheduleForm.equipment_needed,
       createdAt: new Date().toISOString(),
     };
 
-    let updatedScans;
-    if (editingScan) {
-      // Update existing scan
-      updatedScans = scheduledScans.map((scan) =>
-        scan.id === editingScan.id ? { ...scan, ...scanData } : scan
+    let updatedActivities;
+    const activityInfo = getActivityInfo(scheduleForm.activityType);
+
+    if (editingActivity) {
+      // Update existing activity
+      updatedActivities = farmActivities.map((activity) =>
+        activity.id === editingActivity.id ? { ...activity, ...activityData } : activity
       );
       addNotification({
-        type: "scan_scheduled",
-        title: "Scan Updated",
-        message: `${scheduleForm.cropType} scan updated for ${new Date(
+        type: "activity_scheduled",
+        title: "Activity Updated",
+        message: `${activityInfo.label} ${scheduleForm.cropType ? `for ${scheduleForm.cropType}` : ''} updated for ${new Date(
           scheduleForm.date
         ).toLocaleDateString()} at ${scheduleForm.time}`,
-        relatedScanId: editingScan.id,
+        relatedActivityId: editingActivity.id,
       });
     } else {
-      // Create new scan
-      const newScan: ScheduledScan = {
-        ...scanData,
+      // Create new activity
+      const newActivity: FarmActivity = {
+        ...activityData,
         id: Date.now().toString(),
       };
-      updatedScans = [...scheduledScans, newScan];
+      updatedActivities = [...farmActivities, newActivity];
       addNotification({
-        type: "scan_scheduled",
-        title: "Scan Scheduled Successfully",
-        message: `${scheduleForm.cropType} scan scheduled for ${new Date(
+        type: "activity_scheduled",
+        title: "Activity Scheduled Successfully",
+        message: `${activityInfo.label} ${scheduleForm.cropType ? `for ${scheduleForm.cropType}` : ''} scheduled for ${new Date(
           scheduleForm.date
         ).toLocaleDateString()} at ${scheduleForm.time}`,
-        relatedScanId: newScan.id,
+        relatedActivityId: newActivity.id,
       });
     }
 
-    setScheduledScans(updatedScans);
+    setFarmActivities(updatedActivities);
     localStorage.setItem(
-      `scheduledScans_${currentUser.id}`,
-      JSON.stringify(updatedScans)
+      `farmActivities_${currentUser.id}`,
+      JSON.stringify(updatedActivities)
     );
 
     // Reset form
     setScheduleForm({
+      activityType: "",
       cropType: "",
       date: "",
       time: "",
+      duration: 60,
       location: "",
       lat: 0,
       lng: 0,
       notes: "",
+      priority: "medium",
+      weather_dependent: false,
+      equipment_needed: [],
     });
     setShowScheduleModal(false);
-    setEditingScan(null);
+    setEditingActivity(null);
   };
 
-  const editScan = (scan: ScheduledScan) => {
-    setEditingScan(scan);
+  const editActivity = (activity: FarmActivity) => {
+    setEditingActivity(activity);
     setScheduleForm({
-      cropType: scan.cropType,
-      date: scan.scheduledDate,
-      time: scan.scheduledTime,
-      location: scan.location.address,
-      lat: scan.location.lat,
-      lng: scan.location.lng,
-      notes: scan.notes || "",
+      activityType: activity.activityType,
+      cropType: activity.cropType || "",
+      date: activity.scheduledDate,
+      time: activity.scheduledTime,
+      duration: activity.duration || 60,
+      location: activity.location.address,
+      lat: activity.location.lat,
+      lng: activity.location.lng,
+      notes: activity.notes || "",
+      priority: activity.priority,
+      weather_dependent: activity.weather_dependent || false,
+      equipment_needed: activity.equipment_needed || [],
     });
     setShowScheduleModal(true);
   };
 
-  const deleteScan = (scanId: string) => {
+  const deleteActivity = (activityId: string) => {
     if (!currentUser) return;
 
-    const updatedScans = scheduledScans.filter((scan) => scan.id !== scanId);
-    setScheduledScans(updatedScans);
+    const updatedActivities = farmActivities.filter((activity) => activity.id !== activityId);
+    setFarmActivities(updatedActivities);
     localStorage.setItem(
-      `scheduledScans_${currentUser.id}`,
-      JSON.stringify(updatedScans)
+      `farmActivities_${currentUser.id}`,
+      JSON.stringify(updatedActivities)
     );
 
     addNotification({
-      type: "scan_reminder",
-      title: "Scan Deleted",
-      message: "A scheduled scan has been deleted.",
+      type: "activity_reminder",
+      title: "Activity Deleted",
+      message: "A scheduled farm activity has been deleted.",
     });
   };
 
-  const completeScan = (scanId: string) => {
+  const completeActivity = (activityId: string) => {
     if (!currentUser) return;
 
-    const updatedScans = scheduledScans.map((scan) =>
-      scan.id === scanId ? { ...scan, status: "completed" as const } : scan
+    const updatedActivities = farmActivities.map((activity) =>
+      activity.id === activityId ? { ...activity, status: "completed" as const } : activity
     );
-    setScheduledScans(updatedScans);
+    setFarmActivities(updatedActivities);
     localStorage.setItem(
-      `scheduledScans_${currentUser.id}`,
-      JSON.stringify(updatedScans)
+      `farmActivities_${currentUser.id}`,
+      JSON.stringify(updatedActivities)
     );
 
-    const completedScan = scheduledScans.find((scan) => scan.id === scanId);
-    if (completedScan) {
+    const completedActivity = farmActivities.find((activity) => activity.id === activityId);
+    if (completedActivity) {
+      const activityInfo = getActivityInfo(completedActivity.activityType);
       addNotification({
-        type: "scan_completed",
-        title: "Scan Completed",
-        message: `${completedScan.cropType} scan has been completed successfully.`,
-        relatedScanId: scanId,
+        type: "activity_completed",
+        title: "Activity Completed",
+        message: `${activityInfo.label} ${completedActivity.cropType ? `for ${completedActivity.cropType}` : ''} has been completed successfully.`,
+        relatedActivityId: activityId,
       });
     }
   };
 
-  const upcomingScans = scheduledScans
-    .filter((scan) => scan.status === "pending")
+  const upcomingActivities = farmActivities
+    .filter((activity) => activity.status === "pending")
     .sort(
       (a, b) =>
         new Date(a.scheduledDate + "T" + a.scheduledTime).getTime() -
         new Date(b.scheduledDate + "T" + b.scheduledTime).getTime()
     );
 
-  const completedScans = scheduledScans.filter(
-    (scan) => scan.status === "completed"
+  const completedActivities = farmActivities.filter(
+    (activity) => activity.status === "completed"
   );
 
   return (
@@ -276,31 +358,36 @@ export default function SchedulePage() {
                 <Leaf className="w-6 h-6 text-white" />
               </div>
               <div className={styles.headerText}>
-                <h1 className={styles.pageTitle}>Schedule Management</h1>
+                <h1 className={styles.pageTitle}>Farm Activity Planner</h1>
                 <p className={styles.pageSubtitle}>
-                  Manage your crop scanning schedule
+                  Plan and manage all your farm activities
                 </p>
               </div>
             </div>
           </div>
           <button
             onClick={() => {
-              setEditingScan(null);
+              setEditingActivity(null);
               setScheduleForm({
+                activityType: "",
                 cropType: "",
                 date: "",
                 time: "",
+                duration: 60,
                 location: "",
                 lat: 0,
                 lng: 0,
                 notes: "",
+                priority: "medium",
+                weather_dependent: false,
+                equipment_needed: [],
               });
               setShowScheduleModal(true);
             }}
             className={styles.addButton}
           >
             <Plus className="w-5 h-5" />
-            <span>Schedule New Scan</span>
+            <span>Schedule New Activity</span>
           </button>
         </div>
       </header>
@@ -315,8 +402,8 @@ export default function SchedulePage() {
                 <Calendar className="w-8 h-8 text-blue-600" />
               </div>
               <div className={styles.statContent}>
-                <h3 className={styles.statValue}>{upcomingScans.length}</h3>
-                <p className={styles.statLabel}>Upcoming Scans</p>
+                <h3 className={styles.statValue}>{upcomingActivities.length}</h3>
+                <p className={styles.statLabel}>Upcoming Activities</p>
               </div>
             </div>
             <div className={styles.statCard}>
@@ -324,8 +411,8 @@ export default function SchedulePage() {
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
               <div className={styles.statContent}>
-                <h3 className={styles.statValue}>{completedScans.length}</h3>
-                <p className={styles.statLabel}>Completed Scans</p>
+                <h3 className={styles.statValue}>{completedActivities.length}</h3>
+                <p className={styles.statLabel}>Completed Activities</p>
               </div>
             </div>
             <div className={styles.statCard}>
@@ -333,82 +420,106 @@ export default function SchedulePage() {
                 <Clock className="w-8 h-8 text-orange-600" />
               </div>
               <div className={styles.statContent}>
-                <h3 className={styles.statValue}>{scheduledScans.length}</h3>
-                <p className={styles.statLabel}>Total Scheduled</p>
+                <h3 className={styles.statValue}>{farmActivities.length}</h3>
+                <p className={styles.statLabel}>Total Planned</p>
               </div>
             </div>
           </div>
 
-          {/* Upcoming Scans */}
+          {/* Upcoming Activities */}
           <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>Upcoming Scans</h2>
+            <h2 className={styles.sectionTitle}>Upcoming Activities</h2>
             <div className={styles.scansList}>
-              {upcomingScans.length === 0 ? (
+              {upcomingActivities.length === 0 ? (
                 <div className={styles.emptyState}>
                   <Calendar className="w-16 h-16 text-gray-300" />
                   <p className={styles.emptyText}>
-                    No upcoming scans scheduled
+                    No upcoming activities scheduled
                   </p>
                   <button
                     onClick={() => setShowScheduleModal(true)}
                     className={styles.emptyButton}
                   >
-                    Schedule Your First Scan
+                    Schedule Your First Activity
                   </button>
                 </div>
               ) : (
-                upcomingScans.map((scan) => (
-                  <div key={scan.id} className={styles.scanCard}>
+                upcomingActivities.map((activity) => (
+                  <div key={activity.id} className={styles.scanCard}>
                     <div className={styles.scanHeader}>
                       <div className={styles.scanStatus}>
-                        <Clock className="w-5 h-5 text-yellow-600" />
-                        <span className={styles.statusBadge}>Pending</span>
+                        {(() => {
+                          const info = getActivityInfo(activity.activityType);
+                          const IconComponent = info.icon;
+                          return (
+                            <>
+                              <IconComponent className={`w-5 h-5 ${info.color}`} />
+                              <span className={styles.statusBadge}>
+                                {activity.status === 'pending' ? 'Scheduled' : activity.status}
+                              </span>
+                            </>
+                          );
+                        })()}
                       </div>
                       <div className={styles.scanActions}>
                         <button
-                          onClick={() => editScan(scan)}
+                          onClick={() => editActivity(activity)}
                           className={styles.actionButton}
-                          aria-label={`Edit ${scan.cropType} scan`}
+                          aria-label={`Edit ${getActivityInfo(activity.activityType).label} activity`}
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => completeScan(scan.id)}
+                          onClick={() => completeActivity(activity.id)}
                           className={`${styles.actionButton} ${styles.completeButton}`}
-                          aria-label={`Mark ${scan.cropType} scan as complete`}
+                          aria-label={`Mark ${getActivityInfo(activity.activityType).label} as complete`}
                         >
                           <CheckCircle className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => deleteScan(scan.id)}
+                          onClick={() => deleteActivity(activity.id)}
                           className={`${styles.actionButton} ${styles.deleteButton}`}
-                          aria-label={`Delete ${scan.cropType} scan`}
+                          aria-label={`Delete ${getActivityInfo(activity.activityType).label} activity`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
                     <div className={styles.scanContent}>
-                      <h3 className={styles.scanTitle}>{scan.cropType}</h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                        <h3 className={styles.scanTitle}>{getActivityInfo(activity.activityType).label}</h3>
+                        {activity.cropType && (
+                          <span className={styles.cropBadge}>{activity.cropType}</span>
+                        )}
+                        <span className={`${styles.priorityBadge} ${styles[`priority-${activity.priority}`]}`}>
+                          {activity.priority} priority
+                        </span>
+                      </div>
                       <div className={styles.scanDetails}>
                         <div className={styles.scanDetail}>
                           <Calendar className="w-4 h-4 text-gray-500" />
                           <span>
-                            {new Date(scan.scheduledDate).toLocaleDateString()}
+                            {new Date(activity.scheduledDate).toLocaleDateString()}
                           </span>
                         </div>
                         <div className={styles.scanDetail}>
                           <Clock className="w-4 h-4 text-gray-500" />
-                          <span>{scan.scheduledTime}</span>
+                          <span>{activity.scheduledTime} ({activity.duration || 60} min)</span>
                         </div>
                         <div className={styles.scanDetail}>
                           <MapPin className="w-4 h-4 text-gray-500" />
-                          <span>{scan.location.address}</span>
+                          <span>{activity.location.address}</span>
                         </div>
+                        {activity.weather_dependent && (
+                          <div className={styles.scanDetail}>
+                            <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                            <span>Weather dependent</span>
+                          </div>
+                        )}
                       </div>
-                      {scan.notes && (
+                      {activity.notes && (
                         <div className={styles.scanNotes}>
-                          <p>{scan.notes}</p>
+                          <p>{activity.notes}</p>
                         </div>
                       )}
                     </div>
@@ -418,25 +529,31 @@ export default function SchedulePage() {
             </div>
           </div>
 
-          {/* Completed Scans */}
-          {completedScans.length > 0 && (
+          {/* Completed Activities */}
+          {completedActivities.length > 0 && (
             <div className={styles.section}>
               <h2 className={styles.sectionTitle}>Recently Completed</h2>
               <div className={styles.completedList}>
-                {completedScans.slice(0, 5).map((scan) => (
-                  <div key={scan.id} className={styles.completedItem}>
-                    <div className={styles.completedIcon}>
-                      <CheckCircle className="w-5 h-5 text-green-600" />
+                {completedActivities.slice(0, 5).map((activity) => {
+                  const activityInfo = getActivityInfo(activity.activityType);
+                  const IconComponent = activityInfo.icon;
+                  return (
+                    <div key={activity.id} className={styles.completedItem}>
+                      <div className={styles.completedIcon}>
+                        <IconComponent className={`w-5 h-5 ${activityInfo.color}`} />
+                      </div>
+                      <div className={styles.completedContent}>
+                        <h4 className={styles.completedTitle}>
+                          {activityInfo.label} {activity.cropType && `- ${activity.cropType}`}
+                        </h4>
+                        <p className={styles.completedDate}>
+                          {new Date(activity.scheduledDate).toLocaleDateString()} at{" "}
+                          {activity.scheduledTime}
+                        </p>
+                      </div>
                     </div>
-                    <div className={styles.completedContent}>
-                      <h4 className={styles.completedTitle}>{scan.cropType}</h4>
-                      <p className={styles.completedDate}>
-                        {new Date(scan.scheduledDate).toLocaleDateString()} at{" "}
-                        {scan.scheduledTime}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -449,12 +566,12 @@ export default function SchedulePage() {
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
               <h2 className={styles.modalTitle}>
-                {editingScan ? "Edit Scan" : "Schedule New Scan"}
+                {editingActivity ? "Edit Activity" : "Schedule New Activity"}
               </h2>
               <button
                 onClick={() => {
                   setShowScheduleModal(false);
-                  setEditingScan(null);
+                  setEditingActivity(null);
                 }}
                 className={styles.closeButton}
                 aria-label="Close modal"
@@ -465,16 +582,46 @@ export default function SchedulePage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                handleScheduleScan();
+                handleScheduleActivity();
               }}
             >
               <div className={styles.formGrid}>
                 <div className={styles.formGroup}>
                   <label
+                    htmlFor="schedule-activityType"
+                    className={styles.formLabel}
+                  >
+                    Activity Type *
+                  </label>
+                  <select
+                    id="schedule-activityType"
+                    value={scheduleForm.activityType}
+                    onChange={(e) =>
+                      setScheduleForm({
+                        ...scheduleForm,
+                        activityType: e.target.value as FarmActivity['activityType'],
+                      })
+                    }
+                    className={styles.formSelect}
+                    required
+                  >
+                    <option value="">Select activity type</option>
+                    <option value="scan">Crop Scan</option>
+                    <option value="watering">Watering</option>
+                    <option value="fertilizing">Fertilizing</option>
+                    <option value="harvesting">Harvesting</option>
+                    <option value="planting">Planting</option>
+                    <option value="pest_control">Pest Control</option>
+                    <option value="pruning">Pruning</option>
+                    <option value="maintenance">Equipment Maintenance</option>
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
+                  <label
                     htmlFor="schedule-cropType"
                     className={styles.formLabel}
                   >
-                    Crop Type
+                    Crop Type {scheduleForm.activityType && !['maintenance'].includes(scheduleForm.activityType) ? '*' : ''}
                   </label>
                   <select
                     id="schedule-cropType"
@@ -545,6 +692,60 @@ export default function SchedulePage() {
                     className={styles.formInput}
                   />
                 </div>
+                <div className={styles.formGroup}>
+                  <label htmlFor="schedule-duration" className={styles.formLabel}>
+                    Duration (minutes)
+                  </label>
+                  <input
+                    id="schedule-duration"
+                    type="number"
+                    min="15"
+                    max="480"
+                    step="15"
+                    value={scheduleForm.duration}
+                    onChange={(e) =>
+                      setScheduleForm({ ...scheduleForm, duration: parseInt(e.target.value) || 60 })
+                    }
+                    className={styles.formInput}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label htmlFor="schedule-priority" className={styles.formLabel}>
+                    Priority
+                  </label>
+                  <select
+                    id="schedule-priority"
+                    value={scheduleForm.priority}
+                    onChange={(e) =>
+                      setScheduleForm({
+                        ...scheduleForm,
+                        priority: e.target.value as FarmActivity['priority'],
+                      })
+                    }
+                    className={styles.formSelect}
+                  >
+                    <option value="low">Low Priority</option>
+                    <option value="medium">Medium Priority</option>
+                    <option value="high">High Priority</option>
+                  </select>
+                </div>
+              </div>
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={scheduleForm.weather_dependent}
+                      onChange={(e) =>
+                        setScheduleForm({ ...scheduleForm, weather_dependent: e.target.checked })
+                      }
+                    />
+                    Weather Dependent Activity
+                  </label>
+                  <small style={{ color: '#6b7280', fontSize: '12px' }}>
+                    Check if this activity should be postponed in bad weather
+                  </small>
+                </div>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Notes (Optional)</label>
@@ -563,7 +764,7 @@ export default function SchedulePage() {
                   type="button"
                   onClick={() => {
                     setShowScheduleModal(false);
-                    setEditingScan(null);
+                    setEditingActivity(null);
                   }}
                   className={styles.cancelButton}
                 >
@@ -572,14 +773,14 @@ export default function SchedulePage() {
                 <button
                   type="submit"
                   disabled={
-                    !scheduleForm.cropType ||
+                    !scheduleForm.activityType ||
                     !scheduleForm.date ||
                     !scheduleForm.time
                   }
                   className={styles.saveButton}
                 >
                   <Save className="w-4 h-4" />
-                  <span>{editingScan ? "Update Scan" : "Schedule Scan"}</span>
+                  <span>{editingActivity ? "Update Activity" : "Schedule Activity"}</span>
                 </button>
               </div>
             </form>

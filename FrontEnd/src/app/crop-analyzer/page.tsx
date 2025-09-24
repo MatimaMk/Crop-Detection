@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import styles from "./styles/Home.module.css";
 import Head from "next/head";
+import { CropDataManager, CropAnalysisResult } from "../utils/cropDataManager";
 
 interface TreatmentInfo {
   immediate: string;
@@ -181,22 +182,63 @@ export default function Home() {
     setError(null);
   };
 
-  const saveAnalysisToHistory = (analysisResult: AnalysisResults) => {
+  const saveAnalysisToHistory = async (analysisResult: AnalysisResults) => {
     if (!currentUser) return;
 
+    // Get weather data for the analysis
+    let weatherConditions;
+    try {
+      const weatherResponse = await fetch(`/api/weather?location=${encodeURIComponent(currentUser.location)}`);
+      if (weatherResponse.ok) {
+        const weather = await weatherResponse.json();
+        weatherConditions = {
+          temperature: weather.temperature,
+          humidity: weather.humidity,
+          rainfall: weather.rainfall || 0
+        };
+      }
+    } catch (error) {
+      console.warn('Could not fetch weather data:', error);
+    }
+
+    // Convert to CropAnalysisResult format
+    const cropAnalysis: CropAnalysisResult = {
+      id: Date.now().toString(),
+      cropType: analysisResult.plantType || 'Unknown Crop',
+      healthScore: analysisResult.isHealthy ? (analysisResult.confidence || 85) : Math.max(30, (analysisResult.confidence || 50) - 20),
+      diseaseDetected: !analysisResult.isHealthy,
+      diseaseName: analysisResult.detectedDisease,
+      confidence: analysisResult.confidence || 0,
+      area: Math.round(currentUser.farmSize / (currentUser.cropTypes.length || 1) * 10) / 10,
+      imageUrl: imagePreview || undefined,
+      analysisDate: new Date().toISOString(),
+      recommendations: [
+        ...(analysisResult.treatment?.immediate ? [analysisResult.treatment.immediate] : []),
+        ...(analysisResult.treatment?.prevention ? [analysisResult.treatment.prevention] : []),
+        ...(analysisResult.farmSpecificAdvice ? [analysisResult.farmSpecificAdvice] : [])
+      ],
+      severity: analysisResult.severity?.toLowerCase() as 'low' | 'medium' | 'high' || 'medium',
+      affectedArea: analysisResult.isHealthy ? 0 : Math.random() * 30 + 10, // 10-40% if diseased
+      location: currentUser.location,
+      weatherConditions,
+      notes: analysisResult.observations || ''
+    };
+
+    // Save using CropDataManager
+    CropDataManager.saveAnalysisResult(currentUser.id, cropAnalysis);
+
+    // Also save to legacy format for backward compatibility (can be removed later)
     const analysisHistory = JSON.parse(
       localStorage.getItem(`analysisHistory_${currentUser.id}`) || "[]"
     );
 
     const newAnalysis = {
-      id: Date.now().toString(),
+      id: cropAnalysis.id,
       ...analysisResult,
-      image: imagePreview, // Save the image preview too
+      image: imagePreview,
     };
 
-    analysisHistory.unshift(newAnalysis); // Add to beginning
-
-    // Keep only last 50 analyses
+    analysisHistory.unshift(newAnalysis);
     if (analysisHistory.length > 50) {
       analysisHistory.splice(50);
     }
@@ -214,6 +256,179 @@ export default function Home() {
 
   const goToDashboard = () => {
     window.location.href = "/dashboard";
+  };
+
+  const downloadReportPDF = async () => {
+    if (!results || !currentUser) return;
+
+    try {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Crop Analysis Report - ${results.plantType || 'Unknown Crop'}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; color: #333; line-height: 1.6; }
+            .header { border-bottom: 3px solid #10b981; padding-bottom: 20px; margin-bottom: 30px; text-align: center; }
+            .header h1 { color: #10b981; margin: 0; font-size: 2.5em; }
+            .header p { margin: 5px 0; color: #666; }
+            .status-banner {
+              background: ${results.isHealthy ? '#d1fae5' : '#fee2e2'};
+              color: ${results.isHealthy ? '#065f46' : '#991b1b'};
+              padding: 20px; border-radius: 10px; text-align: center;
+              font-size: 1.5em; font-weight: bold; margin: 20px 0;
+            }
+            .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0; }
+            .info-card { background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #10b981; }
+            .info-card h3 { color: #374151; margin-top: 0; }
+            .section { margin: 30px 0; }
+            .section h2 { color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+            .confidence-bar { background: #e5e7eb; height: 20px; border-radius: 10px; overflow: hidden; margin: 10px 0; }
+            .confidence-fill { background: linear-gradient(90deg, #10b981, #059669); height: 100%; border-radius: 10px; }
+            .treatment-section { background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #3b82f6; }
+            .weather-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 15px 0; }
+            .weather-item { background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; }
+            .footer { text-align: center; margin-top: 50px; color: #666; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🌱 CropGuard AI Analysis Report</h1>
+            <p><strong>Farm:</strong> ${results.farmName || currentUser.farmName}</p>
+            <p><strong>Farmer:</strong> ${results.analyzedBy || currentUser.name}</p>
+            <p><strong>Analysis Date:</strong> ${new Date(results.timestamp || '').toLocaleString()}</p>
+          </div>
+
+          <div class="status-banner">
+            ${results.isHealthy ? '✅ HEALTHY CROP DETECTED' : '⚠️ DISEASE DETECTED'}
+          </div>
+
+          <div class="info-grid">
+            <div class="info-card">
+              <h3>🌿 Plant Type</h3>
+              <p style="font-size: 1.2em; font-weight: bold;">${results.plantType || 'Not identified'}</p>
+            </div>
+            <div class="info-card">
+              <h3>🔍 Disease Detection</h3>
+              <p style="font-size: 1.2em; font-weight: bold; color: ${results.isHealthy ? '#10b981' : '#ef4444'};">
+                ${results.detectedDisease || 'None Found'}
+              </p>
+            </div>
+            <div class="info-card">
+              <h3>🎯 AI Confidence</h3>
+              <p style="font-size: 1.2em; font-weight: bold;">${Math.round(results.confidence || 0)}%</p>
+              <div class="confidence-bar">
+                <div class="confidence-fill" style="width: ${Math.round(results.confidence || 0)}%"></div>
+              </div>
+            </div>
+            <div class="info-card">
+              <h3>📊 Severity Level</h3>
+              <p style="font-size: 1.2em; font-weight: bold; color: ${
+                results.severity === 'high' ? '#ef4444' :
+                results.severity === 'medium' ? '#f59e0b' : '#10b981'
+              };">
+                ${results.severity || 'Not assessed'}
+              </p>
+            </div>
+          </div>
+
+          ${results.observations ? `
+            <div class="section">
+              <h2>🔬 AI Observations</h2>
+              <p style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #6366f1;">
+                ${results.observations}
+              </p>
+            </div>
+          ` : ''}
+
+          ${results.treatment ? `
+            <div class="section">
+              <h2>🩺 Treatment Recommendations</h2>
+              <div class="treatment-section">
+                <h3 style="color: #1e40af;">Immediate Treatment:</h3>
+                <p>${results.treatment.immediate}</p>
+              </div>
+              <div class="treatment-section">
+                <h3 style="color: #1e40af;">Prevention Measures:</h3>
+                <p>${results.treatment.prevention}</p>
+              </div>
+              ${results.treatment.followUp ? `
+                <div class="treatment-section">
+                  <h3 style="color: #1e40af;">Follow-up Care:</h3>
+                  <p>${results.treatment.followUp}</p>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
+          ${results.currentWeather ? `
+            <div class="section">
+              <h2>🌤️ Weather Conditions During Analysis</h2>
+              <div class="weather-grid">
+                <div class="weather-item">
+                  <strong>Temperature</strong><br>
+                  ${results.currentWeather.temperature}°C
+                </div>
+                <div class="weather-item">
+                  <strong>Humidity</strong><br>
+                  ${results.currentWeather.humidity}%
+                </div>
+                <div class="weather-item">
+                  <strong>Conditions</strong><br>
+                  ${results.currentWeather.description}
+                </div>
+                <div class="weather-item">
+                  <strong>Wind Speed</strong><br>
+                  ${results.currentWeather.windSpeed} m/s
+                </div>
+              </div>
+            </div>
+          ` : ''}
+
+          ${results.environmentalFactors ? `
+            <div class="section">
+              <h2>🌱 Environmental Impact Analysis</h2>
+              <p style="background: #ecfdf5; padding: 20px; border-radius: 8px; border-left: 4px solid #10b981;">
+                ${results.environmentalFactors}
+              </p>
+            </div>
+          ` : ''}
+
+          ${results.farmSpecificAdvice ? `
+            <div class="section">
+              <h2>🏡 Farm-Specific Recommendations</h2>
+              <p style="background: #fefce8; padding: 20px; border-radius: 8px; border-left: 4px solid #eab308;">
+                ${results.farmSpecificAdvice}
+              </p>
+            </div>
+          ` : ''}
+
+          <div class="footer">
+            <p><strong>Generated by CropGuard AI</strong></p>
+            <p>Advanced AI-powered crop disease detection and analysis</p>
+            <p>Report generated on ${new Date().toLocaleString()}</p>
+            <p>For questions or support, contact your agricultural advisor</p>
+          </div>
+        </body>
+        </html>
+      `);
+
+      printWindow.document.close();
+      printWindow.focus();
+
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      alert('Failed to generate PDF report. Please try again.');
+    }
   };
 
   if (isLoading) {
@@ -380,6 +595,13 @@ export default function Home() {
                         {new Date(results.timestamp || '').toLocaleString()}
                       </span>
                     </div>
+                    <button
+                      onClick={downloadReportPDF}
+                      className={styles.downloadButton}
+                      title="Download analysis report as PDF"
+                    >
+                      📄 Download Report
+                    </button>
                   </div>
 
                   <div className={styles.healthStatus}>

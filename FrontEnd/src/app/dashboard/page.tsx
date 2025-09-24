@@ -28,8 +28,18 @@ import {
   Map,
   Clock,
   MapPin as LocationIcon,
+  TrendingDown,
+  Minus,
+  Download,
+  PieChart,
+  Sprout,
+  Scissors,
+  Truck,
+  Zap,
+  Bug,
 } from "lucide-react";
 import styles from "./dashboard.module.css";
+import { CropDataManager } from "../utils/cropDataManager";
 
 interface Farmer {
   id: string;
@@ -74,8 +84,17 @@ interface NearbyFarmer {
   status: "online" | "offline";
 }
 
-interface ScheduledScan {
+interface FarmActivity {
   id: string;
+  activityType:
+    | "scan"
+    | "watering"
+    | "fertilizing"
+    | "harvesting"
+    | "planting"
+    | "pest_control"
+    | "pruning"
+    | "maintenance";
   cropType: string;
   scheduledDate: string;
   scheduledTime: string;
@@ -85,7 +104,11 @@ interface ScheduledScan {
     address: string;
   };
   notes?: string;
-  status: "pending" | "completed" | "cancelled";
+  status: "pending" | "completed" | "overdue" | "cancelled";
+  reminder?: boolean;
+  priority: "low" | "medium" | "high";
+  estimatedDuration?: number; // in minutes
+  weather_dependent?: boolean;
   createdAt: string;
 }
 
@@ -104,6 +127,11 @@ interface Notification {
   relatedScanId?: string;
 }
 
+interface MonthlyActivityData {
+  month: string;
+  scans: number;
+}
+
 export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState<Farmer | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -111,10 +139,15 @@ export default function Dashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
-  const [scheduledScans, setScheduledScans] = useState<ScheduledScan[]>([]);
+  const [farmActivities, setFarmActivities] = useState<FarmActivity[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState<Farmer | null>(null);
+
+  // Location search states
+  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
 
   // Data states - will be loaded from localStorage
   const [cropData, setCropData] = useState<CropData[]>([]);
@@ -143,11 +176,29 @@ export default function Dashboard() {
       // Redirect to login if no user data
       window.location.href = "/";
     }
+
+    // Add click outside handler for location suggestions
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest("[data-location-container]")) {
+        setShowLocationSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      if ((window as any).locationSearchTimeout) {
+        clearTimeout((window as any).locationSearchTimeout);
+      }
+    };
   }, []);
 
   const loadWeatherData = async (location: string, userId: string) => {
     try {
-      const response = await fetch(`/api/weather?location=${encodeURIComponent(location)}`);
+      const response = await fetch(
+        `/api/weather?location=${encodeURIComponent(location)}`
+      );
 
       if (response.ok) {
         const weatherData = await response.json();
@@ -156,7 +207,7 @@ export default function Dashboard() {
         const cacheData = {
           data: weatherData,
           timestamp: Date.now(),
-          expires: Date.now() + (60 * 60 * 1000) // 1 hour
+          expires: Date.now() + 60 * 60 * 1000, // 1 hour
         };
         localStorage.setItem(`weather_${userId}`, JSON.stringify(cacheData));
       } else {
@@ -177,11 +228,11 @@ export default function Dashboard() {
           rainfall: 0,
           sunlight: 8,
           description: "Weather data unavailable",
-          location: location
+          location: location,
         });
       }
     } catch (error) {
-      console.warn('Failed to load weather data:', error);
+      console.warn("Failed to load weather data:", error);
 
       // Try cached data first
       const cachedWeather = localStorage.getItem(`weather_${userId}`);
@@ -200,55 +251,36 @@ export default function Dashboard() {
         rainfall: 0,
         sunlight: 8,
         description: "Weather data unavailable",
-        location: location
+        location: location,
       });
     }
   };
 
   const loadUserData = (userId: string) => {
-    // Load crop data
-    const savedCropData = localStorage.getItem(`cropData_${userId}`);
-    if (savedCropData) {
-      setCropData(JSON.parse(savedCropData));
+    // Load real crop analysis data using CropDataManager - NO DUMMY DATA
+    const realCropData = CropDataManager.generateCropDataForDashboard(userId);
+
+    if (realCropData.length > 0) {
+      // Convert to dashboard format
+      const dashboardCropData = realCropData.map((crop) => ({
+        cropType: crop.cropType,
+        healthScore: crop.healthScore,
+        lastScanned: crop.lastScanned,
+        diseaseDetected: crop.diseaseDetected,
+        area: crop.area,
+        scanCount: crop.scanCount,
+        trend: crop.trend,
+      }));
+      setCropData(dashboardCropData);
     } else {
-      // Initialize with user's actual crops from their profile
-      const currentUserData = localStorage.getItem("currentUser");
-      if (currentUserData) {
-        const user = JSON.parse(currentUserData);
-        const userCrops = user.cropTypes || [];
-
-        // Create initial crop data based on user's crops
-        const defaultCropData = userCrops.slice(0, 3).map((crop: string, index: number) => ({
-          cropType: crop,
-          healthScore: 85 + Math.floor(Math.random() * 15), // 85-100
-          lastScanned: index === 0 ? "2 hours ago" : `${index + 1} days ago`,
-          diseaseDetected: Math.random() < 0.2, // 20% chance of disease
-          area: Math.round((user.farmSize / userCrops.length) * 10) / 10, // Distribute farm area
-        }));
-
-        // If user has no crops defined, use defaults
-        if (defaultCropData.length === 0) {
-          defaultCropData.push({
-            cropType: "Mixed Crops",
-            healthScore: 88,
-            lastScanned: "1 day ago",
-            diseaseDetected: false,
-            area: user.farmSize || 10,
-          });
-        }
-
-        setCropData(defaultCropData);
-        localStorage.setItem(
-          `cropData_${userId}`,
-          JSON.stringify(defaultCropData)
-        );
-      }
+      // No analysis data exists yet - show empty state
+      setCropData([]);
     }
 
-    // Load scheduled scans
-    const savedScans = localStorage.getItem(`scheduledScans_${userId}`);
-    if (savedScans) {
-      setScheduledScans(JSON.parse(savedScans));
+    // Load farm activities
+    const savedActivities = localStorage.getItem(`farmActivities_${userId}`);
+    if (savedActivities) {
+      setFarmActivities(JSON.parse(savedActivities));
     }
 
     // Load notifications
@@ -257,36 +289,336 @@ export default function Dashboard() {
       setNotifications(JSON.parse(savedNotifications));
     }
 
-    // Load nearby farmers
+    // Load nearby farmers from saved data only - NO DEFAULT DUMMY DATA
     const savedFarmers = localStorage.getItem("nearbyFarmers");
     if (savedFarmers) {
       setNearbyFarmers(JSON.parse(savedFarmers));
     } else {
-      // Initialize with sample nearby farmers
-      const defaultFarmers = [
-        {
-          id: "1",
-          name: "Sarah Johnson",
-          distance: 2.1,
-          cropTypes: ["Corn", "Wheat"],
-          status: "online" as const,
-        },
-        {
-          id: "2",
-          name: "Mike Thompson",
-          distance: 3.5,
-          cropTypes: ["Soybeans", "Corn"],
-          status: "online" as const,
-        },
-      ];
-      setNearbyFarmers(defaultFarmers);
-      localStorage.setItem("nearbyFarmers", JSON.stringify(defaultFarmers));
+      // Start with empty list - no dummy farmers
+      setNearbyFarmers([]);
     }
   };
 
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
     window.location.href = "/";
+  };
+
+  // Location search functions
+  const searchLocations = async (query: string) => {
+    if (query.length < 2) {
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+      return;
+    }
+
+    setIsLoadingLocations(true);
+    try {
+      const response = await fetch(
+        `/api/location?q=${encodeURIComponent(query)}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setLocationSuggestions(data.locations || []);
+        setShowLocationSuggestions(true);
+      } else {
+        setLocationSuggestions([]);
+        setShowLocationSuggestions(false);
+      }
+    } catch (error) {
+      console.error("Failed to search locations:", error);
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+    } finally {
+      setIsLoadingLocations(false);
+    }
+  };
+
+  // Handle location input change with debouncing
+  const handleLocationChange = (value: string) => {
+    if (profileForm) {
+      setProfileForm({ ...profileForm, location: value });
+
+      // Clear previous timeout
+      if ((window as any).locationSearchTimeout) {
+        clearTimeout((window as any).locationSearchTimeout);
+      }
+
+      // Set new timeout
+      (window as any).locationSearchTimeout = setTimeout(() => {
+        searchLocations(value);
+      }, 300);
+    }
+  };
+
+  // Handle location selection from suggestions
+  const handleLocationSelect = (location: any) => {
+    if (profileForm) {
+      setProfileForm({ ...profileForm, location: location.displayName });
+      setShowLocationSuggestions(false);
+      setLocationSuggestions([]);
+    }
+  };
+
+  // Get user's current location
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const response = await fetch("/api/location", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              lat: latitude,
+              lon: longitude,
+            }),
+          });
+
+          if (response.ok) {
+            const locationData = await response.json();
+            if (profileForm) {
+              setProfileForm({
+                ...profileForm,
+                location: locationData.displayName,
+              });
+            }
+          } else {
+            alert("Failed to get location details. Please enter manually.");
+          }
+        } catch (error) {
+          console.error("Error getting location details:", error);
+          alert("Failed to get location details. Please enter manually.");
+        }
+      },
+      (error) => {
+        console.error("Error getting current position:", error);
+        alert("Unable to get your current location. Please enter manually.");
+      }
+    );
+  };
+
+  // Helper function to generate monthly activity data
+  const generateMonthlyActivity = (stats: any): MonthlyActivityData[] => {
+    if (!stats.trendsData || stats.trendsData.length === 0) return [];
+
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+
+    // Group trends by month
+    const groupedByMonth = stats.trendsData.reduce((acc: Record<string, MonthlyActivityData>, trend: any) => {
+      const date = new Date(trend.date);
+      const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+      const monthName = months[date.getMonth()];
+
+      if (!acc[monthKey]) {
+        acc[monthKey] = { month: monthName, scans: 0 };
+      }
+      acc[monthKey].scans += trend.scansCount;
+      return acc;
+    }, {} as Record<string, MonthlyActivityData>);
+
+    return (Object.values(groupedByMonth) as MonthlyActivityData[]).slice(-6); // Last 6 months
+  };
+
+  // Download dashboard PDF function
+  const downloadDashboardPDF = async () => {
+    if (!currentUser) return;
+
+    try {
+      const stats = CropDataManager.getStats(currentUser.id);
+      const diseaseStats = CropDataManager.getDiseaseStats(currentUser.id);
+      const recentScans = CropDataManager.getRecentAnalysisResults(
+        currentUser.id,
+        30
+      );
+
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) return;
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Dashboard Report - ${currentUser.farmName}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; color: #333; line-height: 1.6; }
+            .header { border-bottom: 3px solid #10b981; padding-bottom: 20px; margin-bottom: 30px; text-align: center; }
+            .header h1 { color: #10b981; margin: 0; font-size: 2.5em; }
+            .header p { margin: 5px 0; color: #666; }
+            .stats-overview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 30px 0; }
+            .stat-card { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border-left: 4px solid #10b981; }
+            .stat-value { font-size: 2em; font-weight: bold; color: #10b981; margin-bottom: 5px; }
+            .stat-label { color: #666; }
+            .section { margin: 30px 0; }
+            .section h2 { color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+            .crop-item { background: #f9fafb; padding: 15px; margin: 10px 0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+            .health-bar { width: 200px; height: 20px; background: #e5e7eb; border-radius: 10px; overflow: hidden; }
+            .health-fill { height: 100%; border-radius: 10px; }
+            .disease-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+            .weather-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+            .weather-item { background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; }
+            .footer { text-align: center; margin-top: 50px; color: #666; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🌱 Farm Dashboard Report</h1>
+            <p><strong>Farm:</strong> ${currentUser.farmName}</p>
+            <p><strong>Farmer:</strong> ${currentUser.name}</p>
+            <p><strong>Location:</strong> ${currentUser.location}</p>
+            <p><strong>Farm Size:</strong> ${currentUser.farmSize} acres</p>
+            <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+
+          <div class="stats-overview">
+            <div class="stat-card">
+              <div class="stat-value">${stats.totalScans}</div>
+              <div class="stat-label">Total Scans</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${stats.healthyScans}</div>
+              <div class="stat-label">Healthy Scans</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${stats.diseasedScans}</div>
+              <div class="stat-label">Issues Detected</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${stats.averageHealthScore}%</div>
+              <div class="stat-label">Avg Health Score</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>🌾 Current Crop Health Status</h2>
+            ${
+              cropData.length > 0
+                ? cropData
+                    .map(
+                      (crop) => `
+              <div class="crop-item">
+                <div>
+                  <strong>${crop.cropType}</strong><br>
+                  <small>${crop.area} acres • Last scanned: ${
+                        crop.lastScanned
+                      }</small>
+                </div>
+                <div>
+                  <div class="health-bar">
+                    <div class="health-fill" style="width: ${
+                      crop.healthScore
+                    }%; background: ${
+                        crop.healthScore >= 80
+                          ? "#10b981"
+                          : crop.healthScore >= 60
+                          ? "#f59e0b"
+                          : "#ef4444"
+                      };"></div>
+                  </div>
+                  <small>${crop.healthScore}% Health</small>
+                </div>
+              </div>
+            `
+                    )
+                    .join("")
+                : "<p>No crop data available. Start scanning crops to see health status.</p>"
+            }
+          </div>
+
+          <div class="section">
+            <h2>🦠 Disease Analysis</h2>
+            ${
+              Object.keys(diseaseStats).length > 0
+                ? Object.entries(diseaseStats)
+                    .map(
+                      ([disease, count]) => `
+                <div class="disease-item">
+                  <span>${disease}</span>
+                  <span><strong>${count}</strong> occurrences</span>
+                </div>
+              `
+                    )
+                    .join("")
+                : "<p>No diseases detected. Your crops are healthy!</p>"
+            }
+          </div>
+
+          <div class="section">
+            <h2>🌤️ Current Weather Conditions</h2>
+            <div class="weather-grid">
+              <div class="weather-item">
+                <strong>Temperature</strong><br>
+                ${weatherData.temperature}°C
+              </div>
+              <div class="weather-item">
+                <strong>Humidity</strong><br>
+                ${weatherData.humidity}%
+              </div>
+              <div class="weather-item">
+                <strong>Conditions</strong><br>
+                ${weatherData.description}
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>📊 Health Trends</h2>
+            ${stats.trendsData
+              .slice(-7)
+              .map(
+                (trend) => `
+              <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee;">
+                <span>${new Date(trend.date).toLocaleDateString()}</span>
+                <span><strong>${trend.healthScore}%</strong> (${
+                  trend.scansCount
+                } scans)</span>
+              </div>
+            `
+              )
+              .join("")}
+          </div>
+
+          <div class="footer">
+            <p><strong>Generated by CropGuard AI Dashboard</strong></p>
+            <p>Comprehensive farm management and crop health monitoring</p>
+            <p>Report generated on ${new Date().toLocaleDateString()}</p>
+          </div>
+        </body>
+        </html>
+      `);
+
+      printWindow.document.close();
+      printWindow.focus();
+
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      alert("Failed to generate PDF report. Please try again.");
+    }
   };
 
   // Profile Management
@@ -366,32 +698,88 @@ export default function Dashboard() {
 
   const CropHealthChart = () => (
     <div className={styles.chartContainer}>
-      <h3 className={styles.chartTitle}>Crop Health Overview</h3>
+      <div className={styles.chartHeader}>
+        <h3 className={styles.chartTitle}>Crop Health Overview</h3>
+        {cropData.length > 0 && (
+          <button
+            onClick={() => (window.location.href = "/crop-analyzer")}
+            className={styles.addScanButton}
+          >
+            <Camera className="w-4 h-4" />
+            New Scan
+          </button>
+        )}
+      </div>
       <div className={styles.cropList}>
-        {cropData.map((crop, index) => (
-          <div key={index} className={styles.cropItem}>
-            <div className={styles.cropInfo}>
-              <div className={styles.cropName}>{crop.cropType}</div>
-              <div className={styles.cropDetails}>
-                {crop.area} acres • {crop.lastScanned}
-              </div>
+        {cropData.length === 0 ? (
+          <div className={styles.emptyState}>
+            <div className={styles.emptyStateIcon}>
+              <Camera className="w-12 h-12 text-gray-400" />
             </div>
-            <div className={styles.cropHealth}>
-              <div className={styles.healthScore}>{crop.healthScore}%</div>
-              <div className={styles.healthBar}>
-                <div
-                  className={styles.healthProgress}
-                  style={{ width: `${crop.healthScore}%` }}
-                />
-              </div>
-              {crop.diseaseDetected ? (
-                <AlertTriangle className={styles.alertIcon} />
-              ) : (
-                <CheckCircle className={styles.successIcon} />
-              )}
-            </div>
+            <h4 className={styles.emptyStateTitle}>No Crop Analysis Yet</h4>
+            <p className={styles.emptyStateText}>
+              Start scanning your crops to see health data and disease detection
+              results here.
+            </p>
+            <button
+              onClick={() => (window.location.href = "/crop-analyzer")}
+              className={styles.emptyStateButton}
+            >
+              <Camera className="w-4 h-4" />
+              Scan Your First Crop
+            </button>
           </div>
-        ))}
+        ) : (
+          cropData.map((crop, index) => (
+            <div key={index} className={styles.cropItem}>
+              <div className={styles.cropInfo}>
+                <div className={styles.cropName}>
+                  {crop.cropType}
+                  {(crop as any).trend && (
+                    <span className={styles.trendIcon}>
+                      {(crop as any).trend === "up" && (
+                        <TrendingUp className="w-3 h-3 text-green-500" />
+                      )}
+                      {(crop as any).trend === "down" && (
+                        <TrendingDown className="w-3 h-3 text-red-500" />
+                      )}
+                      {(crop as any).trend === "stable" && (
+                        <Minus className="w-3 h-3 text-gray-500" />
+                      )}
+                    </span>
+                  )}
+                </div>
+                <div className={styles.cropDetails}>
+                  {crop.area} acres • {crop.lastScanned}
+                  {(crop as any).scanCount &&
+                    ` • ${(crop as any).scanCount} scans`}
+                </div>
+              </div>
+              <div className={styles.cropHealth}>
+                <div className={styles.healthScore}>{crop.healthScore}%</div>
+                <div className={styles.healthBar}>
+                  <div
+                    className={styles.healthProgress}
+                    style={{
+                      width: `${crop.healthScore}%`,
+                      backgroundColor:
+                        crop.healthScore >= 80
+                          ? "#10b981"
+                          : crop.healthScore >= 60
+                          ? "#f59e0b"
+                          : "#ef4444",
+                    }}
+                  />
+                </div>
+                {crop.diseaseDetected ? (
+                  <AlertTriangle className={styles.alertIcon} />
+                ) : (
+                  <CheckCircle className={styles.successIcon} />
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -616,37 +1004,86 @@ export default function Dashboard() {
         <div className={styles.container}>
           {/* Stats Cards */}
           <div className={styles.statsGrid}>
-            <StatCard
-              icon={Leaf}
-              title="Total Crops"
-              value={cropData.length}
-              trend={12}
-              color="green"
-            />
-            <StatCard
-              icon={TrendingUp}
-              title="Avg Health Score"
-              value={`${Math.round(
-                cropData.reduce((acc, crop) => acc + crop.healthScore, 0) /
-                  cropData.length
-              )}%`}
-              trend={5}
-              color="blue"
-            />
-            <StatCard
-              icon={AlertTriangle}
-              title="Issues Detected"
-              value={cropData.filter((crop) => crop.diseaseDetected).length}
-              trend={-8}
-              color="orange"
-            />
-            <StatCard
-              icon={Users}
-              title="Nearby Farmers"
-              value={nearbyFarmers.length}
-              trend={3}
-              color="purple"
-            />
+            {cropData.length > 0 ? (
+              <>
+                <StatCard
+                  icon={Leaf}
+                  title="Total Scans"
+                  value={
+                    currentUser
+                      ? CropDataManager.getStats(currentUser.id).totalScans
+                      : 0
+                  }
+                  trend={0}
+                  color="green"
+                />
+                <StatCard
+                  icon={TrendingUp}
+                  title="Avg Health Score"
+                  value={
+                    cropData.length > 0
+                      ? `${Math.round(
+                          cropData.reduce(
+                            (acc, crop) => acc + crop.healthScore,
+                            0
+                          ) / cropData.length
+                        )}%`
+                      : "0%"
+                  }
+                  trend={0}
+                  color="blue"
+                />
+                <StatCard
+                  icon={AlertTriangle}
+                  title="Issues Detected"
+                  value={
+                    currentUser
+                      ? CropDataManager.getStats(currentUser.id).diseasedScans
+                      : 0
+                  }
+                  trend={0}
+                  color="orange"
+                />
+                <StatCard
+                  icon={Camera}
+                  title="Crop Types"
+                  value={cropData.length}
+                  trend={0}
+                  color="purple"
+                />
+              </>
+            ) : (
+              <>
+                <StatCard
+                  icon={Leaf}
+                  title="Total Scans"
+                  value={0}
+                  trend={0}
+                  color="green"
+                />
+                <StatCard
+                  icon={TrendingUp}
+                  title="Avg Health Score"
+                  value="0%"
+                  trend={0}
+                  color="blue"
+                />
+                <StatCard
+                  icon={AlertTriangle}
+                  title="Issues Detected"
+                  value={0}
+                  trend={0}
+                  color="orange"
+                />
+                <StatCard
+                  icon={Camera}
+                  title="Crop Types"
+                  value={0}
+                  trend={0}
+                  color="purple"
+                />
+              </>
+            )}
           </div>
 
           {/* Main Dashboard Grid */}
@@ -657,33 +1094,61 @@ export default function Dashboard() {
               <div className={styles.activityFeed}>
                 <h3 className={styles.sectionTitle}>Recent Activity</h3>
                 <div className={styles.activityList}>
-                  <div className={styles.activityItem}>
-                    <div className={styles.activityIcon}>
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    </div>
-                    <div className={styles.activityContent}>
-                      <p>Corn crop scan completed - Healthy</p>
-                      <span className={styles.activityTime}>2 hours ago</span>
-                    </div>
-                  </div>
-                  <div className={styles.activityItem}>
-                    <div className={styles.activityIcon}>
-                      <AlertTriangle className="w-4 h-4 text-orange-600" />
-                    </div>
-                    <div className={styles.activityContent}>
-                      <p>Wheat crop shows signs of rust disease</p>
-                      <span className={styles.activityTime}>1 day ago</span>
-                    </div>
-                  </div>
-                  <div className={styles.activityItem}>
-                    <div className={styles.activityIcon}>
-                      <MessageCircle className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div className={styles.activityContent}>
-                      <p>Message from Sarah Johnson</p>
-                      <span className={styles.activityTime}>2 days ago</span>
-                    </div>
-                  </div>
+                  {currentUser &&
+                    (() => {
+                      const recentScans =
+                        CropDataManager.getRecentAnalysisResults(
+                          currentUser.id,
+                          7
+                        );
+                      return recentScans.length > 0 ? (
+                        recentScans.slice(0, 5).map((scan, index) => (
+                          <div
+                            key={scan.id || index}
+                            className={styles.activityItem}
+                          >
+                            <div className={styles.activityIcon}>
+                              {scan.diseaseDetected ? (
+                                <AlertTriangle className="w-4 h-4 text-orange-600" />
+                              ) : (
+                                <CheckCircle className="w-4 h-4 text-green-600" />
+                              )}
+                            </div>
+                            <div className={styles.activityContent}>
+                              <p>
+                                {scan.cropType} scan completed -{" "}
+                                {scan.diseaseDetected
+                                  ? `${scan.diseaseName || "Disease"} detected`
+                                  : "Healthy"}
+                              </p>
+                              <span className={styles.activityTime}>
+                                {(() => {
+                                  const scanDate = new Date(scan.analysisDate);
+                                  const now = new Date();
+                                  const diffHours = Math.floor(
+                                    (now.getTime() - scanDate.getTime()) /
+                                      (1000 * 60 * 60)
+                                  );
+                                  return diffHours < 1
+                                    ? "Just now"
+                                    : diffHours < 24
+                                    ? `${diffHours} hours ago`
+                                    : `${Math.floor(diffHours / 24)} days ago`;
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className={styles.emptyActivity}>
+                          <Activity className="w-8 h-8 text-gray-400 mb-2" />
+                          <p className="text-gray-500">No recent activity</p>
+                          <p className="text-sm text-gray-400">
+                            Start scanning crops to see your activity here
+                          </p>
+                        </div>
+                      );
+                    })()}
                 </div>
               </div>
             </div>
@@ -691,6 +1156,254 @@ export default function Dashboard() {
             <div className={styles.sidebar}>
               <WeatherWidget />
               <NearbyFarmersWidget />
+            </div>
+          </div>
+
+          {/* Dashboard Graphs Section */}
+          <div className={styles.graphsSection}>
+            <div className={styles.graphsHeader}>
+              <h2 className={styles.graphsTitle}>
+                📊 Farm Analytics & Insights
+              </h2>
+              <button
+                onClick={downloadDashboardPDF}
+                className={styles.downloadDashboardBtn}
+              >
+                <Download className="w-4 h-4" />
+                Download Report
+              </button>
+            </div>
+
+            <div className={styles.graphsGrid}>
+              {/* Health Trends Graph */}
+              <div className={styles.graphCard}>
+                <h3 className={styles.graphCardTitle}>
+                  Health Trends (Last 30 Days)
+                </h3>
+                {currentUser &&
+                  (() => {
+                    const stats = CropDataManager.getStats(currentUser.id);
+                    const trendsData = stats.trendsData.slice(-14); // Last 14 days
+
+                    return trendsData.length > 0 ? (
+                      <div className={styles.healthTrendsGraph}>
+                        <div className={styles.trendsContainer}>
+                          {trendsData.map((trend, index) => (
+                            <div key={trend.date} className={styles.trendBar}>
+                              <div
+                                className={styles.trendBarFill}
+                                style={{
+                                  height: `${
+                                    (trend.healthScore / 100) * 120
+                                  }px`,
+                                  backgroundColor:
+                                    trend.healthScore >= 80
+                                      ? "#10b981"
+                                      : trend.healthScore >= 60
+                                      ? "#f59e0b"
+                                      : "#ef4444",
+                                }}
+                              />
+                              <span className={styles.trendDate}>
+                                {new Date(trend.date).toLocaleDateString("en", {
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </span>
+                              <span className={styles.trendValue}>
+                                {trend.healthScore}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={styles.emptyGraph}>
+                        <Activity className="w-12 h-12 text-gray-400 mb-2" />
+                        <p>No trend data available</p>
+                        <p className="text-sm text-gray-400">
+                          Start scanning crops to see trends
+                        </p>
+                      </div>
+                    );
+                  })()}
+              </div>
+
+              {/* Disease Distribution */}
+              <div className={styles.graphCard}>
+                <h3 className={styles.graphCardTitle}>Disease Distribution</h3>
+                {currentUser &&
+                  (() => {
+                    const diseaseStats = CropDataManager.getDiseaseStats(
+                      currentUser.id
+                    );
+                    const hasData = Object.keys(diseaseStats).length > 0;
+
+                    return hasData ? (
+                      <div className={styles.diseaseChart}>
+                        {Object.entries(diseaseStats)
+                          .sort(([, a], [, b]) => b - a)
+                          .slice(0, 5)
+                          .map(([disease, count]) => (
+                            <div key={disease} className={styles.diseaseItem}>
+                              <div className={styles.diseaseInfo}>
+                                <span className={styles.diseaseName}>
+                                  {disease}
+                                </span>
+                                <span className={styles.diseaseCount}>
+                                  {count} cases
+                                </span>
+                              </div>
+                              <div className={styles.diseaseBar}>
+                                <div
+                                  className={styles.diseaseBarFill}
+                                  style={{
+                                    width: `${
+                                      (count /
+                                        Math.max(
+                                          ...Object.values(diseaseStats)
+                                        )) *
+                                      100
+                                    }%`,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className={styles.emptyGraph}>
+                        <CheckCircle className="w-12 h-12 text-green-500 mb-2" />
+                        <p>No diseases detected!</p>
+                        <p className="text-sm text-gray-400">
+                          Your crops are healthy
+                        </p>
+                      </div>
+                    );
+                  })()}
+              </div>
+
+              {/* Monthly Activity Summary */}
+              <div className={styles.graphCard}>
+                <h3 className={styles.graphCardTitle}>Monthly Scan Activity</h3>
+                {currentUser &&
+                  (() => {
+                    const stats = CropDataManager.getStats(currentUser.id);
+                    const monthlyData = generateMonthlyActivity(stats);
+
+                    return monthlyData.length > 0 ? (
+                      <div className={styles.monthlyChart}>
+                        {monthlyData.map((month, index) => (
+                          <div key={month.month} className={styles.monthBar}>
+                            <div
+                              className={styles.monthBarFill}
+                              style={{
+                                height: `${
+                                  (month.scans /
+                                    Math.max(
+                                      ...monthlyData.map((m) => m.scans)
+                                    )) *
+                                  100
+                                }px`,
+                              }}
+                            />
+                            <span className={styles.monthLabel}>
+                              {month.month}
+                            </span>
+                            <span className={styles.monthValue}>
+                              {month.scans}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className={styles.emptyGraph}>
+                        <Calendar className="w-12 h-12 text-blue-500 mb-2" />
+                        <p>No scan history</p>
+                        <p className="text-sm text-gray-400">
+                          Activity will appear here
+                        </p>
+                      </div>
+                    );
+                  })()}
+              </div>
+
+              {/* Crop Health Distribution */}
+              <div className={styles.graphCard}>
+                <h3 className={styles.graphCardTitle}>
+                  Crop Health Distribution
+                </h3>
+                {cropData.length > 0 ? (
+                  <div className={styles.healthDistribution}>
+                    <div className={styles.healthPieChart}>
+                      {(() => {
+                        const healthy = cropData.filter(
+                          (c) => c.healthScore >= 80
+                        ).length;
+                        const moderate = cropData.filter(
+                          (c) => c.healthScore >= 60 && c.healthScore < 80
+                        ).length;
+                        const poor = cropData.filter(
+                          (c) => c.healthScore < 60
+                        ).length;
+                        const total = cropData.length;
+
+                        return (
+                          <>
+                            <div className={styles.pieChartVisual}>
+                              <div
+                                className={styles.pieSegment}
+                                style={{
+                                  background: `conic-gradient(
+                                    #10b981 0deg ${(healthy / total) * 360}deg,
+                                    #f59e0b ${(healthy / total) * 360}deg ${
+                                    ((healthy + moderate) / total) * 360
+                                  }deg,
+                                    #ef4444 ${
+                                      ((healthy + moderate) / total) * 360
+                                    }deg 360deg
+                                  )`,
+                                }}
+                              />
+                            </div>
+                            <div className={styles.pieLegend}>
+                              <div className={styles.legendItem}>
+                                <div
+                                  className={styles.legendColor}
+                                  style={{ background: "#10b981" }}
+                                />
+                                <span>Healthy ({healthy})</span>
+                              </div>
+                              <div className={styles.legendItem}>
+                                <div
+                                  className={styles.legendColor}
+                                  style={{ background: "#f59e0b" }}
+                                />
+                                <span>Moderate ({moderate})</span>
+                              </div>
+                              <div className={styles.legendItem}>
+                                <div
+                                  className={styles.legendColor}
+                                  style={{ background: "#ef4444" }}
+                                />
+                                <span>Poor ({poor})</span>
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.emptyGraph}>
+                    <PieChart className="w-12 h-12 text-purple-500 mb-2" />
+                    <p>No health data</p>
+                    <p className="text-sm text-gray-400">
+                      Scan crops to see distribution
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -788,19 +1501,140 @@ export default function Dashboard() {
                   <label htmlFor="locationInput" className={styles.formLabel}>
                     Location
                   </label>
-                  <input
-                    id="locationInput"
-                    type="text"
-                    value={profileForm?.location || ""}
-                    onChange={(e) =>
-                      setProfileForm({
-                        ...profileForm!,
-                        location: e.target.value,
-                      })
-                    }
-                    disabled={!isEditingProfile}
-                    className={styles.formInput}
-                  />
+                  <div style={{ position: "relative" }} data-location-container>
+                    <input
+                      id="locationInput"
+                      type="text"
+                      placeholder={
+                        isEditingProfile ? "Start typing city name..." : ""
+                      }
+                      value={profileForm?.location || ""}
+                      onChange={(e) => {
+                        if (isEditingProfile) {
+                          handleLocationChange(e.target.value);
+                        }
+                      }}
+                      onFocus={() => {
+                        if (
+                          isEditingProfile &&
+                          locationSuggestions.length > 0
+                        ) {
+                          setShowLocationSuggestions(true);
+                        }
+                      }}
+                      disabled={!isEditingProfile}
+                      className={styles.formInput}
+                      autoComplete="off"
+                    />
+                    {isEditingProfile && (
+                      <button
+                        type="button"
+                        onClick={getCurrentLocation}
+                        title="Use my current location"
+                        style={{
+                          position: "absolute",
+                          right: "8px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: "4px",
+                          borderRadius: "4px",
+                          color: "#666",
+                        }}
+                      >
+                        <LocationIcon className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    {/* Location suggestions dropdown */}
+                    {isEditingProfile &&
+                      showLocationSuggestions &&
+                      locationSuggestions.length > 0 && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: "0",
+                            right: "0",
+                            background: "white",
+                            border: "1px solid #ddd",
+                            borderTop: "none",
+                            borderRadius: "0 0 4px 4px",
+                            maxHeight: "200px",
+                            overflowY: "auto",
+                            zIndex: 1000,
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                          }}
+                        >
+                          {locationSuggestions.map((location, index) => (
+                            <div
+                              key={index}
+                              onClick={() => handleLocationSelect(location)}
+                              style={{
+                                padding: "8px 12px",
+                                cursor: "pointer",
+                                borderBottom:
+                                  index < locationSuggestions.length - 1
+                                    ? "1px solid #eee"
+                                    : "none",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor =
+                                  "#f5f5f5";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "white";
+                              }}
+                            >
+                              <div
+                                style={{ fontWeight: "bold", fontSize: "14px" }}
+                              >
+                                {location.name}
+                              </div>
+                              <div style={{ fontSize: "12px", color: "#666" }}>
+                                {location.state && `${location.state}, `}
+                                {location.country}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                    {/* Loading indicator */}
+                    {isEditingProfile && isLoadingLocations && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: "0",
+                          right: "0",
+                          background: "white",
+                          border: "1px solid #ddd",
+                          borderTop: "none",
+                          borderRadius: "0 0 4px 4px",
+                          padding: "8px 12px",
+                          zIndex: 1000,
+                          fontSize: "12px",
+                          color: "#666",
+                        }}
+                      >
+                        Searching locations...
+                      </div>
+                    )}
+                  </div>
+                  {isEditingProfile && (
+                    <small
+                      style={{
+                        fontSize: "12px",
+                        color: "#666",
+                        marginTop: "4px",
+                      }}
+                    >
+                      Type your city name or click the location icon to use GPS
+                    </small>
+                  )}
                 </div>
               </div>
               <div className={styles.formRow}>

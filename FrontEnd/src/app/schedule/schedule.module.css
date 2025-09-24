@@ -503,6 +503,82 @@
   }
 }
 
+/* Activity Type Badges */
+.cropBadge {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #3b82f6;
+}
+
+.priorityBadge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.priority-low {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #9ca3af;
+}
+
+.priority-medium {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+
+.priority-high {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #ef4444;
+}
+
+/* Form Row for Checkboxes */
+.formRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.formRow .formGroup {
+  flex: 1;
+}
+
+/* Enhanced Form Styles */
+.formGroup input[type="checkbox"] {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: #16a34a;
+}
+
+.formGroup small {
+  display: block;
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* Activity Status Enhancements */
+.statusBadge {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+/* Responsive Updates */
 @media (max-width: 640px) {
   .headerLeft .logo .headerText {
     display: none;
@@ -515,5 +591,15 @@
   .modalContent {
     margin: 0.5rem;
     max-width: calc(100vw - 1rem);
+  }
+
+  .formRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cropBadge, .priorityBadge {
+    font-size: 11px;
+    padding: 3px 6px;
   }
 }

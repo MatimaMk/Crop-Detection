@@ -196,18 +196,21 @@ export default function Dashboard() {
 
   const loadWeatherData = async (location: string, userId: string) => {
     try {
+      // Force fresh data by bypassing cache
       const response = await fetch(
-        `/api/weather?location=${encodeURIComponent(location)}`
+        `/api/weather?location=${encodeURIComponent(location)}&t=${Date.now()}`,
+        { cache: 'no-store' }
       );
 
       if (response.ok) {
         const weatherData = await response.json();
+        console.log('Weather data received:', weatherData);
         setWeatherData(weatherData);
-        // Cache for 1 hour
+        // Cache for 15 minutes to match API cache
         const cacheData = {
           data: weatherData,
           timestamp: Date.now(),
-          expires: Date.now() + 60 * 60 * 1000, // 1 hour
+          expires: Date.now() + 15 * 60 * 1000, // 15 minutes
         };
         localStorage.setItem(`weather_${userId}`, JSON.stringify(cacheData));
       } else {

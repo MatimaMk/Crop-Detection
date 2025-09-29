@@ -119,6 +119,11 @@ function normalizeLocationName(location: string): string {
     normalized = normalized.split(',')[0].trim();
   }
 
+  // Handle Tshwane -> Pretoria mapping for OpenWeather API
+  if (normalized.toLowerCase().includes('tshwane')) {
+    normalized = 'Pretoria';
+  }
+
   return normalized;
 }
 
@@ -179,7 +184,69 @@ export async function GET(request: NextRequest) {
 
     location = location.trim();
 
-    // Get weather data directly from local database - NO API CALLS
+    // Try to fetch real weather data from OpenWeather API
+    const OPENWEATHER_API_KEY = "be44b26d4e6a960fe5e06a50eced870b";
+
+    try {
+      // Simplify location to just city name for better API compatibility
+      const simplifiedLocation = normalizeLocationName(location);
+      const apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(simplifiedLocation)}&appid=${OPENWEATHER_API_KEY}&units=metric`;
+      console.log(`Fetching weather from OpenWeather API for: ${simplifiedLocation}`);
+
+      // Increase timeout and add signal
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+      const apiResponse = await fetch(apiUrl, {
+        cache: 'no-store',
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      console.log(`OpenWeather API response status: ${apiResponse.status}`);
+
+      if (apiResponse.ok) {
+        const data = await apiResponse.json();
+
+        // Calculate sunlight hours
+        const now = Math.floor(Date.now() / 1000);
+        const sunlightHours = calculateSunlightHours(
+          data.weather[0].id,
+          now,
+          data.sys.sunrise,
+          data.sys.sunset
+        );
+
+        const weatherData = {
+          temperature: Math.round(data.main.temp),
+          humidity: data.main.humidity,
+          description: data.weather[0].description,
+          windSpeed: data.wind.speed,
+          pressure: data.main.pressure,
+          location: data.name,
+          country: data.sys.country,
+          icon: data.weather[0].icon,
+          rainfall: data.rain?.["1h"] || data.rain?.["3h"] || 0,
+          sunlight: sunlightHours,
+          visibility: data.visibility ? data.visibility / 1000 : undefined,
+          source: "openweather",
+          timestamp: new Date().toISOString()
+        };
+
+        console.log(`✓ Real weather data fetched for: ${location} (${weatherData.temperature}°C, ${weatherData.description})`);
+
+        const response = NextResponse.json(weatherData);
+        response.headers.set('Cache-Control', 'public, max-age=900'); // Cache for 15 minutes
+        return response;
+      } else {
+        const errorData = await apiResponse.text();
+        console.warn(`OpenWeather API failed with status ${apiResponse.status}: ${errorData}`);
+      }
+    } catch (apiError) {
+      console.error("OpenWeather API error:", apiError);
+    }
+
+    // Fallback to local data if API fails
     const weatherData = {
       ...getWeatherData(location),
       source: "local",
@@ -224,12 +291,10 @@ export async function GET(request: NextRequest) {
       weatherData.humidity = Math.max(30, weatherData.humidity - 10); // Lower humidity in winter
     }
 
-    console.log(`Weather data provided for: ${location} (${weatherData.temperature}°C, ${weatherData.description})`);
+    console.log(`Fallback weather data provided for: ${location} (${weatherData.temperature}°C, ${weatherData.description})`);
 
-    // Cache the result in the response headers
     const response = NextResponse.json(weatherData);
     response.headers.set('Cache-Control', 'public, max-age=900'); // Cache for 15 minutes
-
     return response;
 
   } catch (error) {

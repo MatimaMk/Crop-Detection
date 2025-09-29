@@ -134,6 +134,7 @@ export default function Home() {
           farmSize: currentUser?.farmSize,
           cropTypes: currentUser?.cropTypes,
           experienceYears: currentUser?.experienceYears,
+          phoneNumber: currentUser?.phone || '+27825185584',
         }),
       });
 

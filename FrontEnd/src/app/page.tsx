@@ -144,7 +144,7 @@ export default function CropDiseaseLanding() {
 
   // Handle location input change with debouncing
   const handleLocationChange = (value: string) => {
-    setRegisterForm({ ...registerForm, location: value });
+    setRegisterForm(prev => ({ ...prev, location: value }));
 
     // Clear previous timeout
     if (window.locationSearchTimeout) {
@@ -159,7 +159,7 @@ export default function CropDiseaseLanding() {
 
   // Handle location selection from suggestions
   const handleLocationSelect = (location: any) => {
-    setRegisterForm({ ...registerForm, location: location.displayName });
+    setRegisterForm(prev => ({ ...prev, location: location.displayName }));
     setShowLocationSuggestions(false);
     setLocationSuggestions([]);
   };
@@ -188,7 +188,7 @@ export default function CropDiseaseLanding() {
 
           if (response.ok) {
             const locationData = await response.json();
-            setRegisterForm({ ...registerForm, location: locationData.displayName });
+            setRegisterForm(prev => ({ ...prev, location: locationData.displayName }));
           } else {
             alert('Failed to get location details. Please enter manually.');
           }
@@ -931,9 +931,10 @@ export default function CropDiseaseLanding() {
               type="email"
               placeholder="Enter your email"
               value={loginForm.email}
-              onChange={(e) =>
-                setLoginForm({ ...loginForm, email: e.target.value })
-              }
+              onChange={(e) => {
+                const value = e.target.value;
+                setLoginForm(prev => ({ ...prev, email: value }));
+              }}
               className={styles.formInput}
               required
               aria-describedby={loginError ? "login-error" : undefined}
@@ -948,9 +949,10 @@ export default function CropDiseaseLanding() {
               type="password"
               placeholder="Enter your password"
               value={loginForm.password}
-              onChange={(e) =>
-                setLoginForm({ ...loginForm, password: e.target.value })
-              }
+              onChange={(e) => {
+                const value = e.target.value;
+                setLoginForm(prev => ({ ...prev, password: value }));
+              }}
               className={styles.formInput}
               required
               aria-describedby={loginError ? "login-error" : undefined}
@@ -1003,9 +1005,10 @@ export default function CropDiseaseLanding() {
                 type="text"
                 placeholder="Enter your full name"
                 value={registerForm.name}
-                onChange={(e) =>
-                  setRegisterForm({ ...registerForm, name: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setRegisterForm(prev => ({ ...prev, name: value }));
+                }}
                 className={styles.formInput}
                 required
                 aria-describedby={registerError ? "register-error" : undefined}
@@ -1020,9 +1023,10 @@ export default function CropDiseaseLanding() {
                 type="email"
                 placeholder="Enter your email"
                 value={registerForm.email}
-                onChange={(e) =>
-                  setRegisterForm({ ...registerForm, email: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setRegisterForm(prev => ({ ...prev, email: value }));
+                }}
                 className={styles.formInput}
                 required
                 aria-describedby={registerError ? "register-error" : undefined}
@@ -1037,9 +1041,10 @@ export default function CropDiseaseLanding() {
                 type="password"
                 placeholder="Enter password (min. 6 characters)"
                 value={registerForm.password}
-                onChange={(e) =>
-                  setRegisterForm({ ...registerForm, password: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setRegisterForm(prev => ({ ...prev, password: value }));
+                }}
                 className={styles.formInput}
                 required
                 minLength={6}
@@ -1058,12 +1063,10 @@ export default function CropDiseaseLanding() {
                 type="password"
                 placeholder="Confirm your password"
                 value={registerForm.confirmPassword}
-                onChange={(e) =>
-                  setRegisterForm({
-                    ...registerForm,
-                    confirmPassword: e.target.value,
-                  })
-                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setRegisterForm(prev => ({ ...prev, confirmPassword: value }));
+                }}
                 className={styles.formInput}
                 required
                 aria-describedby={registerError ? "register-error" : undefined}
@@ -1078,9 +1081,10 @@ export default function CropDiseaseLanding() {
                 type="tel"
                 placeholder="Enter phone number"
                 value={registerForm.phone}
-                onChange={(e) =>
-                  setRegisterForm({ ...registerForm, phone: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setRegisterForm(prev => ({ ...prev, phone: value }));
+                }}
                 className={styles.formInput}
                 required
                 aria-describedby={registerError ? "register-error" : undefined}
@@ -1100,9 +1104,10 @@ export default function CropDiseaseLanding() {
                 type="text"
                 placeholder="Enter your farm name"
                 value={registerForm.farmName}
-                onChange={(e) =>
-                  setRegisterForm({ ...registerForm, farmName: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setRegisterForm(prev => ({ ...prev, farmName: value }));
+                }}
                 className={styles.formInput}
                 required
                 aria-describedby={registerError ? "register-error" : undefined}
@@ -1230,9 +1235,10 @@ export default function CropDiseaseLanding() {
                 type="number"
                 placeholder="Enter farm size in acres"
                 value={registerForm.farmSize}
-                onChange={(e) =>
-                  setRegisterForm({ ...registerForm, farmSize: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setRegisterForm(prev => ({ ...prev, farmSize: value }));
+                }}
                 className={styles.formInput}
                 required
                 min="0"
@@ -1249,9 +1255,10 @@ export default function CropDiseaseLanding() {
                 type="number"
                 placeholder="Years of farming experience"
                 value={registerForm.experienceYears}
-                onChange={(e) =>
-                  setRegisterForm({ ...registerForm, experienceYears: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setRegisterForm(prev => ({ ...prev, experienceYears: value }));
+                }}
                 className={styles.formInput}
                 required
                 min="0"
@@ -1273,7 +1280,7 @@ export default function CropDiseaseLanding() {
               value={registerForm.cropTypes}
               onChange={(e) => {
                 const selectedValues = Array.from(e.target.selectedOptions, option => option.value);
-                setRegisterForm({ ...registerForm, cropTypes: selectedValues });
+                setRegisterForm(prev => ({ ...prev, cropTypes: selectedValues }));
               }}
               className={`${styles.formSelect} ${styles.formSelectMultiple}`}
               required

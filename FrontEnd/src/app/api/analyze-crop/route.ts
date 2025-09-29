@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize Google Generative AI with direct API key
-const genAI = new GoogleGenerativeAI("AIzaSyBxM9lp3-3_mifpdppt66AlhWAPcLUd90k");
+const genAI = new GoogleGenerativeAI("AIzaSyDefMd3KBOFKGchBK9AoVZgQ45aiqbnPQ8");
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
       userLocation,
       farmSize,
       cropTypes,
-      experienceYears
+      experienceYears,
+      phoneNumber,
     } = await request.json();
 
     if (!image || !mimeType) {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     const weatherData = await getCurrentWeather(userLocation);
 
     // Get the generative model
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
     // Create farm-specific prompt for crop disease analysis
     const prompt = `
@@ -43,15 +44,19 @@ export async function POST(request: NextRequest) {
       - Location: ${userLocation}
       - Farm Size: ${farmSize} acres
       - Farmer's Experience: ${experienceYears} years
-      - Crops Grown: ${cropTypes?.join(', ') || 'Various crops'}
+      - Crops Grown: ${cropTypes?.join(", ") || "Various crops"}
 
       CURRENT WEATHER CONDITIONS:
-      ${weatherData ? `
+      ${
+        weatherData
+          ? `
       - Temperature: ${weatherData.temperature}°C
       - Humidity: ${weatherData.humidity}%
       - Weather: ${weatherData.description}
       - Wind Speed: ${weatherData.windSpeed} m/s
-      ` : 'Weather data unavailable'}
+      `
+          : "Weather data unavailable"
+      }
 
       ANALYSIS REQUIRED:
       Analyze this crop/plant image considering the above farm context and current weather conditions.
@@ -114,7 +119,7 @@ export async function POST(request: NextRequest) {
         {
           error: "Failed to parse AI analysis response",
           details: "The AI response could not be parsed. Please try again.",
-          rawResponse: text.substring(0, 500)
+          rawResponse: text.substring(0, 500),
         },
         { status: 500 }
       );
@@ -128,13 +133,20 @@ export async function POST(request: NextRequest) {
       confidence: Math.min(100, Math.max(0, analysisResult.confidence ?? 70)),
       observations: analysisResult.observations ?? "Analysis completed",
       treatment: {
-        immediate: analysisResult.treatment?.immediate ?? "Monitor plant condition",
-        prevention: analysisResult.treatment?.prevention ?? "Maintain proper plant care",
-        followUp: analysisResult.treatment?.followUp ?? "Regular health checks recommended",
+        immediate:
+          analysisResult.treatment?.immediate ?? "Monitor plant condition",
+        prevention:
+          analysisResult.treatment?.prevention ?? "Maintain proper plant care",
+        followUp:
+          analysisResult.treatment?.followUp ??
+          "Regular health checks recommended",
       },
       severity: analysisResult.severity ?? "mild",
-      environmentalFactors: analysisResult.environmentalFactors ?? "Weather conditions normal",
-      farmSpecificAdvice: analysisResult.farmSpecificAdvice ?? "Continue current farming practices",
+      environmentalFactors:
+        analysisResult.environmentalFactors ?? "Weather conditions normal",
+      farmSpecificAdvice:
+        analysisResult.farmSpecificAdvice ??
+        "Continue current farming practices",
       analyzedBy: userName,
       farmName: farmName,
       farmLocation: userLocation,
@@ -142,6 +154,37 @@ export async function POST(request: NextRequest) {
       currentWeather: weatherData,
       timestamp: new Date().toISOString(),
     };
+
+    // Send WhatsApp notification if disease detected and phone number provided
+    if (!validatedResult.isHealthy && phoneNumber) {
+      try {
+        const whatsappResponse = await fetch(`${request.nextUrl.origin}/api/send-whatsapp`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phoneNumber: phoneNumber,
+            diseaseName: validatedResult.detectedDisease,
+            plantType: validatedResult.plantType,
+            severity: validatedResult.severity,
+            treatment: validatedResult.treatment
+          }),
+        });
+
+        if (whatsappResponse.ok) {
+          const whatsappData = await whatsappResponse.json();
+          console.log('WhatsApp notification sent successfully:', whatsappData.messageSid);
+          validatedResult.whatsappSent = true;
+        } else {
+          console.warn('Failed to send WhatsApp notification');
+          validatedResult.whatsappSent = false;
+        }
+      } catch (whatsappError) {
+        console.error('WhatsApp notification error:', whatsappError);
+        validatedResult.whatsappSent = false;
+      }
+    }
 
     return NextResponse.json(validatedResult);
   } catch (error) {
@@ -151,7 +194,7 @@ export async function POST(request: NextRequest) {
       {
         error: "Analysis failed",
         details: error instanceof Error ? error.message : "Unknown error",
-        note: "Please ensure Google AI API key is properly configured"
+        note: "Please ensure Google AI API key is properly configured",
       },
       { status: 500 }
     );
@@ -162,18 +205,21 @@ export async function POST(request: NextRequest) {
 async function getCurrentWeather(location: string) {
   try {
     // Use a direct API key for OpenWeather (replace with your own)
-    const OPENWEATHER_API_KEY = "your_openweather_api_key_here";
+    const OPENWEATHER_API_KEY = "be44b26d4e6a960fe5e06a50eced870b";
 
-    if (!location) {
+    if (!location || !OPENWEATHER_API_KEY || OPENWEATHER_API_KEY === "your_openweather_api_key_here") {
+      console.warn("Weather API unavailable: Missing location or API key");
       return null;
     }
 
     const response = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&appid=${OPENWEATHER_API_KEY}&units=metric`
+      `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
+        location
+      )}&appid=${OPENWEATHER_API_KEY}&units=metric`
     );
 
     if (!response.ok) {
-      console.warn('Weather API request failed:', response.status);
+      console.warn("Weather API request failed:", response.status);
       return null;
     }
 
@@ -185,10 +231,10 @@ async function getCurrentWeather(location: string) {
       description: data.weather[0].description,
       windSpeed: data.wind.speed,
       pressure: data.main.pressure,
-      location: data.name
+      location: data.name,
     };
   } catch (error) {
-    console.warn('Failed to fetch weather data:', error);
+    console.warn("Failed to fetch weather data:", error);
     return null;
   }
 }

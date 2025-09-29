@@ -1505,6 +1505,7 @@
   background-color: white !important;
 }
 
+/* Disabled to prevent focus loss on input
 .formInput:invalid:not(:focus):not(:placeholder-shown) {
   border-color: #dc2626;
   background-color: #fef2f2;
@@ -1514,6 +1515,7 @@
   border-color: #16a34a;
   background-color: #f0fdf4;
 }
+*/
 
 .formInputError {
   border-color: #dc2626;

@@ -88,6 +88,9 @@ export default function SchedulePage() {
     priority: "medium" as FarmActivity['priority'],
     weather_dependent: false,
     equipment_needed: [] as string[],
+    isMultiDay: false,
+    numberOfDays: 1,
+    repeatInterval: 1, // days between each occurrence
   });
 
   useEffect(() => {
@@ -191,30 +194,30 @@ export default function SchedulePage() {
       return;
     }
 
-    const activityData: Omit<FarmActivity, 'id'> = {
-      activityType: scheduleForm.activityType,
-      cropType: scheduleForm.cropType,
-      scheduledDate: scheduleForm.date,
-      scheduledTime: scheduleForm.time,
-      duration: scheduleForm.duration,
-      location: {
-        lat: scheduleForm.lat || -25.7479 + Math.random() * 0.1,
-        lng: scheduleForm.lng || 28.2293 + Math.random() * 0.1,
-        address: scheduleForm.location || "Farm Location",
-      },
-      notes: scheduleForm.notes,
-      status: "pending" as const,
-      priority: scheduleForm.priority,
-      weather_dependent: scheduleForm.weather_dependent,
-      equipment_needed: scheduleForm.equipment_needed,
-      createdAt: new Date().toISOString(),
-    };
-
     let updatedActivities;
     const activityInfo = getActivityInfo(scheduleForm.activityType);
 
     if (editingActivity) {
-      // Update existing activity
+      // Update existing activity (single activity only)
+      const activityData: Omit<FarmActivity, 'id'> = {
+        activityType: scheduleForm.activityType,
+        cropType: scheduleForm.cropType,
+        scheduledDate: scheduleForm.date,
+        scheduledTime: scheduleForm.time,
+        duration: scheduleForm.duration,
+        location: {
+          lat: scheduleForm.lat || -25.7479 + Math.random() * 0.1,
+          lng: scheduleForm.lng || 28.2293 + Math.random() * 0.1,
+          address: scheduleForm.location || "Farm Location",
+        },
+        notes: scheduleForm.notes,
+        status: "pending" as const,
+        priority: scheduleForm.priority,
+        weather_dependent: scheduleForm.weather_dependent,
+        equipment_needed: scheduleForm.equipment_needed,
+        createdAt: new Date().toISOString(),
+      };
+
       updatedActivities = farmActivities.map((activity) =>
         activity.id === editingActivity.id ? { ...activity, ...activityData } : activity
       );
@@ -227,19 +230,48 @@ export default function SchedulePage() {
         relatedActivityId: editingActivity.id,
       });
     } else {
-      // Create new activity
-      const newActivity: FarmActivity = {
-        ...activityData,
-        id: Date.now().toString(),
-      };
-      updatedActivities = [...farmActivities, newActivity];
+      // Create new activities (single or multiple days)
+      const newActivities: FarmActivity[] = [];
+      const startDate = new Date(scheduleForm.date);
+      const totalDays = scheduleForm.isMultiDay ? scheduleForm.numberOfDays : 1;
+
+      for (let i = 0; i < totalDays; i++) {
+        const activityDate = new Date(startDate);
+        activityDate.setDate(startDate.getDate() + (i * scheduleForm.repeatInterval));
+
+        const activityData: FarmActivity = {
+          id: `${Date.now()}-${i}`,
+          activityType: scheduleForm.activityType,
+          cropType: scheduleForm.cropType,
+          scheduledDate: activityDate.toISOString().split('T')[0],
+          scheduledTime: scheduleForm.time,
+          duration: scheduleForm.duration,
+          location: {
+            lat: scheduleForm.lat || -25.7479 + Math.random() * 0.1,
+            lng: scheduleForm.lng || 28.2293 + Math.random() * 0.1,
+            address: scheduleForm.location || "Farm Location",
+          },
+          notes: scheduleForm.notes,
+          status: "pending" as const,
+          priority: scheduleForm.priority,
+          weather_dependent: scheduleForm.weather_dependent,
+          equipment_needed: scheduleForm.equipment_needed,
+          createdAt: new Date().toISOString(),
+        };
+        newActivities.push(activityData);
+      }
+
+      updatedActivities = [...farmActivities, ...newActivities];
+
+      const scheduleMessage = scheduleForm.isMultiDay
+        ? `${activityInfo.label} ${scheduleForm.cropType ? `for ${scheduleForm.cropType}` : ''} scheduled for ${totalDays} days starting ${new Date(scheduleForm.date).toLocaleDateString()}`
+        : `${activityInfo.label} ${scheduleForm.cropType ? `for ${scheduleForm.cropType}` : ''} scheduled for ${new Date(scheduleForm.date).toLocaleDateString()} at ${scheduleForm.time}`;
+
       addNotification({
         type: "activity_scheduled",
         title: "Activity Scheduled Successfully",
-        message: `${activityInfo.label} ${scheduleForm.cropType ? `for ${scheduleForm.cropType}` : ''} scheduled for ${new Date(
-          scheduleForm.date
-        ).toLocaleDateString()} at ${scheduleForm.time}`,
-        relatedActivityId: newActivity.id,
+        message: scheduleMessage,
+        relatedActivityId: newActivities[0].id,
       });
     }
 
@@ -263,6 +295,9 @@ export default function SchedulePage() {
       priority: "medium",
       weather_dependent: false,
       equipment_needed: [],
+      isMultiDay: false,
+      numberOfDays: 1,
+      repeatInterval: 1,
     });
     setShowScheduleModal(false);
     setEditingActivity(null);
@@ -283,6 +318,9 @@ export default function SchedulePage() {
       priority: activity.priority,
       weather_dependent: activity.weather_dependent || false,
       equipment_needed: activity.equipment_needed || [],
+      isMultiDay: false, // Editing is always single day
+      numberOfDays: 1,
+      repeatInterval: 1,
     });
     setShowScheduleModal(true);
   };
@@ -381,6 +419,9 @@ export default function SchedulePage() {
                 priority: "medium",
                 weather_dependent: false,
                 equipment_needed: [],
+                isMultiDay: false,
+                numberOfDays: 1,
+                repeatInterval: 1,
               });
               setShowScheduleModal(true);
             }}
@@ -747,6 +788,69 @@ export default function SchedulePage() {
                   </small>
                 </div>
               </div>
+              {!editingActivity && (
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.formLabel} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={scheduleForm.isMultiDay}
+                        onChange={(e) =>
+                          setScheduleForm({ ...scheduleForm, isMultiDay: e.target.checked })
+                        }
+                      />
+                      Schedule for Multiple Days
+                    </label>
+                    <small style={{ color: '#6b7280', fontSize: '12px' }}>
+                      Check to repeat this activity over multiple days
+                    </small>
+                  </div>
+                </div>
+              )}
+              {scheduleForm.isMultiDay && !editingActivity && (
+                <div className={styles.formGrid}>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="schedule-numberOfDays" className={styles.formLabel}>
+                      Number of Days
+                    </label>
+                    <input
+                      id="schedule-numberOfDays"
+                      type="number"
+                      min="2"
+                      max="30"
+                      value={scheduleForm.numberOfDays}
+                      onChange={(e) =>
+                        setScheduleForm({ ...scheduleForm, numberOfDays: parseInt(e.target.value) || 1 })
+                      }
+                      className={styles.formInput}
+                      required
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '12px' }}>
+                      Total number of days to schedule this activity
+                    </small>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="schedule-repeatInterval" className={styles.formLabel}>
+                      Repeat Every (Days)
+                    </label>
+                    <input
+                      id="schedule-repeatInterval"
+                      type="number"
+                      min="1"
+                      max="7"
+                      value={scheduleForm.repeatInterval}
+                      onChange={(e) =>
+                        setScheduleForm({ ...scheduleForm, repeatInterval: parseInt(e.target.value) || 1 })
+                      }
+                      className={styles.formInput}
+                      required
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '12px' }}>
+                      Days between each occurrence (1 = daily, 2 = every other day, etc.)
+                    </small>
+                  </div>
+                </div>
+              )}
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Notes (Optional)</label>
                 <textarea

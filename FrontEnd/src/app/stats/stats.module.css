@@ -200,7 +200,7 @@
 
 .trendChart {
   display: flex;
-  align-items: end;
+  align-items: flex-end;
   gap: 8px;
   height: 200px;
   padding: 0 10px;

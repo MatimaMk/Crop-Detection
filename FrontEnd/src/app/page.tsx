@@ -27,6 +27,37 @@ import {
 } from "lucide-react";
 import styles from "./page.module.css";
 
+// Modal Component - moved outside to prevent re-creation on every render
+const Modal = ({
+  show,
+  onClose,
+  children,
+  isRegister = false,
+}: {
+  show: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+  isRegister?: boolean;
+}) => {
+  if (!show) return null;
+
+  return (
+    <div className={styles.modal}>
+      <div className={`${styles.modalContent} ${isRegister ? styles.modalContentRegister : ''}`}>
+        <button
+          type="button"
+          onClick={onClose}
+          className={styles.modalCloseButton}
+          aria-label="Close"
+        >
+          <X className="w-6 h-6" />
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+};
+
 export default function CropDiseaseLanding() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -58,7 +89,7 @@ export default function CropDiseaseLanding() {
     },
   ]);
 
-  const cropOptions = ["Corn", "Wheat", "Soybeans", "Rice", "Barley", "Oats", "Cotton", "Tomatoes", "Potatoes", "Carrots"];
+  const cropOptions = ["Apple", "Bell pepper", "Blueberry", "Cherry", "Corn", "Peach", "Potato", "Raspberry", "Soybean", "Squash", "Strawberry", "Tomato", "Grape"];
 
   // Load users from localStorage on component mount
   React.useEffect(() => {
@@ -387,36 +418,6 @@ export default function CropDiseaseLanding() {
     setCurrentUser(null);
   };
 
-  const Modal = ({
-    show,
-    onClose,
-    children,
-    isRegister = false,
-  }: {
-    show: boolean;
-    onClose: () => void;
-    children: React.ReactNode;
-    isRegister?: boolean;
-  }) => {
-    if (!show) return null;
-
-    return (
-      <div className={styles.modal}>
-        <div className={`${styles.modalContent} ${isRegister ? styles.modalContentRegister : ''}`}>
-          <button
-            type="button"
-            onClick={onClose}
-            className={styles.modalCloseButton}
-            aria-label="Close"
-          >
-            <X className="w-6 h-6" />
-          </button>
-          {children}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className={styles.container}>
       {/* Background Images */}
@@ -586,15 +587,6 @@ export default function CropDiseaseLanding() {
               <p className={styles.heroSubtitle}>
                 DO IT WITH OUR way with our guided AI detection programme
               </p>
-
-              <div className={styles.heroTrial}>
-                <p className={styles.heroTrialText}>
-                  Try it now, download a free
-                </p>
-                <button className={styles.heroTrialLink}>
-                  Sample menu
-                </button>
-              </div>
             </div>
 
             {/* Advanced Crop Analysis Dashboard */}
@@ -931,10 +923,7 @@ export default function CropDiseaseLanding() {
               type="email"
               placeholder="Enter your email"
               value={loginForm.email}
-              onChange={(e) => {
-                const value = e.target.value;
-                setLoginForm(prev => ({ ...prev, email: value }));
-              }}
+              onChange={(e) => setLoginForm(prev => ({ ...prev, email: e.target.value }))}
               className={styles.formInput}
               required
               aria-describedby={loginError ? "login-error" : undefined}
@@ -949,10 +938,7 @@ export default function CropDiseaseLanding() {
               type="password"
               placeholder="Enter your password"
               value={loginForm.password}
-              onChange={(e) => {
-                const value = e.target.value;
-                setLoginForm(prev => ({ ...prev, password: value }));
-              }}
+              onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
               className={styles.formInput}
               required
               aria-describedby={loginError ? "login-error" : undefined}
@@ -1005,10 +991,7 @@ export default function CropDiseaseLanding() {
                 type="text"
                 placeholder="Enter your full name"
                 value={registerForm.name}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setRegisterForm(prev => ({ ...prev, name: value }));
-                }}
+                onChange={(e) => setRegisterForm(prev => ({ ...prev, name: e.target.value }))}
                 className={styles.formInput}
                 required
                 aria-describedby={registerError ? "register-error" : undefined}
@@ -1023,10 +1006,7 @@ export default function CropDiseaseLanding() {
                 type="email"
                 placeholder="Enter your email"
                 value={registerForm.email}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setRegisterForm(prev => ({ ...prev, email: value }));
-                }}
+                onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
                 className={styles.formInput}
                 required
                 aria-describedby={registerError ? "register-error" : undefined}
@@ -1041,10 +1021,7 @@ export default function CropDiseaseLanding() {
                 type="password"
                 placeholder="Enter password (min. 6 characters)"
                 value={registerForm.password}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setRegisterForm(prev => ({ ...prev, password: value }));
-                }}
+                onChange={(e) => setRegisterForm(prev => ({ ...prev, password: e.target.value }))}
                 className={styles.formInput}
                 required
                 minLength={6}
@@ -1063,10 +1040,7 @@ export default function CropDiseaseLanding() {
                 type="password"
                 placeholder="Confirm your password"
                 value={registerForm.confirmPassword}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setRegisterForm(prev => ({ ...prev, confirmPassword: value }));
-                }}
+                onChange={(e) => setRegisterForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
                 className={styles.formInput}
                 required
                 aria-describedby={registerError ? "register-error" : undefined}
@@ -1081,10 +1055,7 @@ export default function CropDiseaseLanding() {
                 type="tel"
                 placeholder="Enter phone number"
                 value={registerForm.phone}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setRegisterForm(prev => ({ ...prev, phone: value }));
-                }}
+                onChange={(e) => setRegisterForm(prev => ({ ...prev, phone: e.target.value }))}
                 className={styles.formInput}
                 required
                 aria-describedby={registerError ? "register-error" : undefined}
@@ -1104,10 +1075,7 @@ export default function CropDiseaseLanding() {
                 type="text"
                 placeholder="Enter your farm name"
                 value={registerForm.farmName}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setRegisterForm(prev => ({ ...prev, farmName: value }));
-                }}
+                onChange={(e) => setRegisterForm(prev => ({ ...prev, farmName: e.target.value }))}
                 className={styles.formInput}
                 required
                 aria-describedby={registerError ? "register-error" : undefined}
@@ -1235,10 +1203,7 @@ export default function CropDiseaseLanding() {
                 type="number"
                 placeholder="Enter farm size in acres"
                 value={registerForm.farmSize}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setRegisterForm(prev => ({ ...prev, farmSize: value }));
-                }}
+                onChange={(e) => setRegisterForm(prev => ({ ...prev, farmSize: e.target.value }))}
                 className={styles.formInput}
                 required
                 min="0"
@@ -1255,10 +1220,7 @@ export default function CropDiseaseLanding() {
                 type="number"
                 placeholder="Years of farming experience"
                 value={registerForm.experienceYears}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setRegisterForm(prev => ({ ...prev, experienceYears: value }));
-                }}
+                onChange={(e) => setRegisterForm(prev => ({ ...prev, experienceYears: e.target.value }))}
                 className={styles.formInput}
                 required
                 min="0"

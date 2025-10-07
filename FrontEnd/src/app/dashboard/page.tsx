@@ -929,9 +929,15 @@ export default function Dashboard() {
               <Calendar className="w-6 h-6" />
               <span>View Calendar</span>
             </button>
-            <button className={styles.actionButton} aria-label="Contact Expert">
+            <button
+              className={styles.actionButton}
+              onClick={() => {
+                window.location.href = "/crop-advisor";
+              }}
+              aria-label="Crop Advisor"
+            >
               <MessageCircle className="w-6 h-6" />
-              <span>Contact Expert</span>
+              <span>Crop Advisor</span>
             </button>
           </div>
         </div>
@@ -950,32 +956,45 @@ export default function Dashboard() {
             <span className={styles.logoText}>CropGuard AI</span>
           </div>
 
-          <div className={styles.headerCenter}>
-            <h1 className={styles.welcomeText}>
-              Welcome back, {currentUser?.name}
-            </h1>
-            <p className={styles.farmInfo}>
-              {currentUser?.farmName} • {currentUser?.location}
-            </p>
-          </div>
+          <nav className={styles.navigation}>
+            <button
+              className={styles.navButton}
+              onClick={() => (window.location.href = "/crop-advisor")}
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>Crop Advisor</span>
+            </button>
+            <button
+              className={styles.navButton}
+              onClick={() => (window.location.href = "/health-history")}
+            >
+              <Activity className="w-4 h-4" />
+              <span>Health History</span>
+            </button>
+            <button
+              className={styles.navButton}
+              onClick={() => (window.location.href = "/reminders")}
+            >
+              <Bell className="w-4 h-4" />
+              <span>Reminders</span>
+            </button>
+            <button
+              className={styles.navButton}
+              onClick={() => (window.location.href = "/schedule")}
+            >
+              <Calendar className="w-4 h-4" />
+              <span>Schedule</span>
+            </button>
+            <button
+              className={styles.navButton}
+              onClick={() => (window.location.href = "/calendar")}
+            >
+              <Calendar className="w-4 h-4" />
+              <span>Calendar</span>
+            </button>
+          </nav>
 
           <div className={styles.headerActions}>
-            <nav className={styles.navigation}>
-              <button
-                className={styles.navButton}
-                onClick={() => (window.location.href = "/schedule")}
-              >
-                <Calendar className="w-4 h-4" />
-                <span>Schedule</span>
-              </button>
-              <button
-                className={styles.navButton}
-                onClick={() => (window.location.href = "/calendar")}
-              >
-                <Calendar className="w-4 h-4" />
-                <span>Calendar</span>
-              </button>
-            </nav>
             <button
               className={styles.headerButton}
               onClick={() => setShowNotifications(!showNotifications)}
@@ -1001,6 +1020,18 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* Welcome Section */}
+      <div className={styles.welcomeSection}>
+        <div className={styles.welcomeContent}>
+          <h1 className={styles.welcomeText}>
+            Welcome back, {currentUser?.name}
+          </h1>
+          <p className={styles.farmInfo}>
+            {currentUser?.farmName} • {currentUser?.location}
+          </p>
+        </div>
+      </div>
 
       {/* Main Content */}
       <main className={styles.main}>
@@ -1482,7 +1513,6 @@ export default function Dashboard() {
               </div>
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Farm Name</label>
                   <label htmlFor="farmNameInput" className={styles.formLabel}>
                     Farm Name
                   </label>
@@ -1642,7 +1672,6 @@ export default function Dashboard() {
               </div>
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Farm Size (acres)</label>
                   <label htmlFor="farmSizeInput" className={styles.formLabel}>
                     Farm Size (acres)
                   </label>
@@ -1689,7 +1718,6 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Phone</label>
                 <label htmlFor="phoneInput" className={styles.formLabel}>
                   Phone
                 </label>
@@ -1755,14 +1783,19 @@ export default function Dashboard() {
                       className={styles.cropSelect}
                       aria-label="Select multiple crops"
                     >
+                      <option value="Apple">Apple</option>
+                      <option value="Bell pepper">Bell pepper</option>
+                      <option value="Blueberry">Blueberry</option>
+                      <option value="Cherry">Cherry</option>
                       <option value="Corn">Corn</option>
-                      <option value="Wheat">Wheat</option>
-                      <option value="Soybeans">Soybeans</option>
-                      <option value="Rice">Rice</option>
-                      <option value="Tomatoes">Tomatoes</option>
-                      <option value="Potatoes">Potatoes</option>
-                      <option value="Cotton">Cotton</option>
-                      <option value="Sunflower">Sunflower</option>
+                      <option value="Peach">Peach</option>
+                      <option value="Potato">Potato</option>
+                      <option value="Raspberry">Raspberry</option>
+                      <option value="Soybean">Soybean</option>
+                      <option value="Squash">Squash</option>
+                      <option value="Strawberry">Strawberry</option>
+                      <option value="Tomato">Tomato</option>
+                      <option value="Grape">Grape</option>
                     </select>
                   )}
                 </div>

@@ -17,17 +17,19 @@
 .headerContent {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 4rem;
+  gap: 1.5rem;
+  min-height: 4rem;
 }
 
 .logo {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .logoIcon {
@@ -45,34 +47,13 @@
   color: #111827;
 }
 
-.headerCenter {
-  flex: 1;
-  text-align: center;
-}
-
-.welcomeText {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #111827;
-  margin: 0;
-}
-
-.farmInfo {
-  color: #6b7280;
-  margin: 0;
-  font-size: 0.875rem;
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
 .navigation {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+  justify-content: center;
 }
 
 .navButton {
@@ -87,6 +68,44 @@
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+/* Welcome Section Below Header */
+.welcomeSection {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1.5rem 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.welcomeContent {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.welcomeText {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.2;
+}
+
+.farmInfo {
+  color: #6b7280;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .navButton:hover {
@@ -873,9 +892,39 @@
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .navigation {
+    display: none;
+  }
+
+  .headerContent {
+    gap: 1rem;
+  }
+}
+
 @media (max-width: 768px) {
   .headerContent {
+    padding: 0.75rem 1rem;
+  }
+
+  .logoText {
+    display: none;
+  }
+
+  .welcomeSection {
+    padding: 1rem 0;
+  }
+
+  .welcomeContent {
     padding: 0 1rem;
+  }
+
+  .welcomeText {
+    font-size: 1.25rem;
+  }
+
+  .farmInfo {
+    font-size: 0.8rem;
   }
 
   .container {
@@ -884,14 +933,6 @@
 
   .statsGrid {
     grid-template-columns: 1fr;
-  }
-
-  .welcomeText {
-    font-size: 1.25rem;
-  }
-
-  .farmInfo {
-    display: none;
   }
 
   .weatherGrid {
@@ -904,10 +945,6 @@
 
   .formRow {
     grid-template-columns: 1fr;
-  }
-
-  .navigation {
-    display: none;
   }
 }
 

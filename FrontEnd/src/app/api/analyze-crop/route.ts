@@ -4,6 +4,51 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // Initialize Google Generative AI with direct API key
 const genAI = new GoogleGenerativeAI("AIzaSyDefMd3KBOFKGchBK9AoVZgQ45aiqbnPQ8");
 
+// Supported crops and their diseases
+const CROP_DISEASE_MAP: Record<string, string[]> = {
+  "Apple": ["Scab", "Rust", "Healthy leaf"],
+  "Bell pepper": ["Leaf spot", "Healthy leaf"],
+  "Blueberry": ["Healthy leaf"],
+  "Cherry": ["Healthy leaf"],
+  "Corn": ["Gray leaf spot", "Leaf blight", "Rust", "Healthy leaf"],
+  "Peach": ["Healthy leaf"],
+  "Potato": ["Early blight", "Late blight", "Healthy leaf"],
+  "Raspberry": ["Healthy leaf"],
+  "Soybean": ["Healthy leaf"],
+  "Squash": ["Powdery mildew", "Healthy leaf"],
+  "Strawberry": ["Healthy leaf"],
+  "Tomato": ["Early blight", "Septoria leaf spot", "Bacterial spot", "Late blight", "Mosaic virus", "Yellow virus", "Mold", "Two spotted spider mites", "Healthy leaf"],
+  "Grape": ["Black rot", "Healthy leaf"]
+};
+
+// Validate detected disease against crop type
+function validateDiseaseForCrop(plantType: string, detectedDisease: string): string {
+  // Normalize plant type (case-insensitive matching)
+  const normalizedPlantType = Object.keys(CROP_DISEASE_MAP).find(
+    crop => crop.toLowerCase() === plantType.toLowerCase()
+  );
+
+  if (!normalizedPlantType) {
+    console.warn(`Plant type "${plantType}" not in supported list`);
+    return detectedDisease; // Return as-is if plant not recognized
+  }
+
+  const validDiseases = CROP_DISEASE_MAP[normalizedPlantType];
+
+  // Check if disease is valid for this crop (case-insensitive)
+  const normalizedDisease = validDiseases.find(
+    disease => disease.toLowerCase() === detectedDisease.toLowerCase()
+  );
+
+  if (normalizedDisease) {
+    return normalizedDisease; // Return properly capitalized disease name
+  }
+
+  // If disease not found, default to "Healthy leaf" or first valid disease
+  console.warn(`Disease "${detectedDisease}" not valid for ${normalizedPlantType}, defaulting to Healthy leaf`);
+  return "Healthy leaf";
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Parse the request body
@@ -35,6 +80,69 @@ export async function POST(request: NextRequest) {
     // Get the generative model
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
+    // First, validate that the image is a plant/crop
+    const validationPrompt = `
+      Analyze this image and determine if it shows a plant, crop, or vegetation.
+
+      Respond with ONLY a JSON object in this exact format:
+      {
+        "isPlant": true/false,
+        "reason": "brief explanation"
+      }
+
+      Return true only if the image shows:
+      - Living plants, crops, or vegetation
+      - Plant leaves, stems, flowers, or fruits
+      - Agricultural crops or garden plants
+
+      Return false if the image shows:
+      - Animals, people, or objects
+      - Buildings, vehicles, or infrastructure
+      - Food products that are not plants
+      - Non-plant materials
+      - Abstract or unclear images
+    `;
+
+    const validationResult = await model.generateContent([
+      validationPrompt,
+      {
+        inlineData: {
+          data: image,
+          mimeType: mimeType,
+        },
+      },
+    ]);
+
+    const validationResponse = await validationResult.response;
+    const validationText = validationResponse.text();
+
+    // Parse validation response
+    let validationData;
+    try {
+      const jsonMatch = validationText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        validationData = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error("No JSON found in validation response");
+      }
+    } catch (parseError) {
+      console.error("Failed to parse validation response:", parseError);
+      // Default to allowing the image if validation fails
+      validationData = { isPlant: true, reason: "Validation inconclusive" };
+    }
+
+    // If not a plant, reject the analysis
+    if (!validationData.isPlant) {
+      return NextResponse.json(
+        {
+          error: "Invalid image type",
+          message: "Please upload an image of a plant or crop. The provided image does not appear to contain plant material.",
+          reason: validationData.reason,
+        },
+        { status: 400 }
+      );
+    }
+
     // Create farm-specific prompt for crop disease analysis
     const prompt = `
       You are an expert agricultural AI assistant analyzing a crop image for ${userName} from ${farmName} farm.
@@ -58,29 +166,54 @@ export async function POST(request: NextRequest) {
           : "Weather data unavailable"
       }
 
+      SUPPORTED CROPS AND DISEASES:
+      You MUST identify the crop from this list and ONLY detect diseases specific to that crop:
+
+      - Apple: Scab, Rust, Healthy leaf
+      - Bell pepper: Leaf spot, Healthy leaf
+      - Blueberry: Healthy leaf
+      - Cherry: Healthy leaf
+      - Corn: Gray leaf spot, Leaf blight, Rust, Healthy leaf
+      - Peach: Healthy leaf
+      - Potato: Early blight, Late blight, Healthy leaf
+      - Raspberry: Healthy leaf
+      - Soybean: Healthy leaf
+      - Squash: Powdery mildew, Healthy leaf
+      - Strawberry: Healthy leaf
+      - Tomato: Early blight, Septoria leaf spot, Bacterial spot, Late blight, Mosaic virus, Yellow virus, Mold, Two spotted spider mites, Healthy leaf
+      - Grape: Black rot, Healthy leaf
+
+      IMPORTANT INSTRUCTIONS:
+      1. First identify which plant/crop this is from the list above
+      2. If the plant is healthy, set "detectedDisease" to "Healthy leaf"
+      3. If diseased, ONLY use diseases from the specific list for that crop type
+      4. Do NOT invent or use disease names not listed above
+      5. Match the exact disease name format from the list (e.g., "Early blight", "Gray leaf spot")
+
       ANALYSIS REQUIRED:
       Analyze this crop/plant image considering the above farm context and current weather conditions.
       Consider how the current weather and local conditions might affect plant health and disease development.
 
       Provide your analysis in this EXACT JSON format:
       {
-        "isHealthy": boolean,
-        "detectedDisease": "string or null",
-        "plantType": "identified plant/crop type",
+        "isHealthy": boolean (true if "Healthy leaf", false if disease detected),
+        "detectedDisease": "string - use exact disease name from the list above, or 'Healthy leaf' if healthy",
+        "plantType": "identified plant/crop type from the supported crops list",
         "confidence": number (0-100),
         "observations": "detailed observations about the plant's condition, considering current weather and farm conditions",
         "treatment": {
-          "immediate": "immediate treatment recommendations specific to this farm's conditions",
+          "immediate": "immediate treatment recommendations specific to this farm's conditions (or 'No treatment needed' if healthy)",
           "prevention": "prevention measures considering the farm's climate and crops",
           "followUp": "follow-up care instructions tailored to the farmer's experience level"
         },
-        "severity": "mild/moderate/severe",
+        "severity": "low/medium/high (or 'none' if healthy)",
         "environmentalFactors": "how current weather/climate affects this condition",
         "farmSpecificAdvice": "advice specific to this farm's crops and location"
       }
 
       Focus on:
-      - Identifying the specific plant type from the farmer's known crops if possible
+      - Identifying the specific plant type from the supported crops list
+      - Using ONLY the disease names specified for that crop type
       - Analyzing how current weather conditions might contribute to any observed issues
       - Providing treatment advice appropriate for a ${experienceYears}-year experienced farmer
       - Considering the farm's location (${userLocation}) for climate-specific advice
@@ -125,23 +258,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate plant type and disease
+    const plantType = analysisResult.plantType ?? "Unknown plant";
+    const rawDisease = analysisResult.detectedDisease ?? "Healthy leaf";
+    const validatedDisease = validateDiseaseForCrop(plantType, rawDisease);
+
+    // Update isHealthy based on validated disease
+    const isHealthy = validatedDisease === "Healthy leaf";
+
     // Ensure all required fields are present and add farm-specific info
     const validatedResult = {
-      isHealthy: analysisResult.isHealthy ?? true,
-      detectedDisease: analysisResult.detectedDisease ?? null,
-      plantType: analysisResult.plantType ?? "Unknown plant",
+      isHealthy: isHealthy,
+      detectedDisease: validatedDisease,
+      plantType: plantType,
       confidence: Math.min(100, Math.max(0, analysisResult.confidence ?? 70)),
       observations: analysisResult.observations ?? "Analysis completed",
       treatment: {
         immediate:
-          analysisResult.treatment?.immediate ?? "Monitor plant condition",
+          analysisResult.treatment?.immediate ?? (isHealthy ? "No treatment needed" : "Monitor plant condition"),
         prevention:
           analysisResult.treatment?.prevention ?? "Maintain proper plant care",
         followUp:
           analysisResult.treatment?.followUp ??
           "Regular health checks recommended",
       },
-      severity: analysisResult.severity ?? "mild",
+      severity: isHealthy ? "none" : (analysisResult.severity ?? "low"),
       environmentalFactors:
         analysisResult.environmentalFactors ?? "Weather conditions normal",
       farmSpecificAdvice:
@@ -168,7 +309,12 @@ export async function POST(request: NextRequest) {
             diseaseName: validatedResult.detectedDisease,
             plantType: validatedResult.plantType,
             severity: validatedResult.severity,
-            treatment: validatedResult.treatment
+            confidence: validatedResult.confidence,
+            observations: validatedResult.observations,
+            treatment: validatedResult.treatment,
+            farmName: farmName,
+            userName: userName,
+            environmentalFactors: validatedResult.environmentalFactors
           }),
         });
 

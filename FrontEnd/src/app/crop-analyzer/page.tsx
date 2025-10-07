@@ -58,7 +58,11 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<Farmer | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [showWebcam, setShowWebcam] = useState<boolean>(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     // Check if user is logged in
@@ -140,6 +144,9 @@ export default function Home() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (errorData.error === "Invalid image type") {
+          throw new Error(errorData.message || "Please upload a valid plant or crop image.");
+        }
         throw new Error(errorData.error || "Analysis failed");
       }
 
@@ -157,11 +164,14 @@ export default function Home() {
       saveAnalysisToHistory(personalizedResult);
     } catch (err) {
       console.error("Analysis error:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to analyze image. Please try again."
-      );
+      const errorMessage = err instanceof Error ? err.message : "Failed to analyze image. Please try again.";
+      setError(errorMessage);
+
+      // If it's an invalid image type error, clear the selected image
+      if (errorMessage.includes("plant or crop")) {
+        setSelectedImage(null);
+        setImagePreview(null);
+      }
     } finally {
       setAnalyzing(false);
     }
@@ -181,10 +191,142 @@ export default function Home() {
     setImagePreview(null);
     setResults(null);
     setError(null);
+    stopWebcam();
   };
+
+  const startWebcam = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: 1280, height: 720 },
+      });
+      setStream(mediaStream);
+      setShowWebcam(true);
+      setError(null);
+
+      // Set video source when video element is ready
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err) {
+      console.error("Error accessing webcam:", err);
+      setError("Unable to access camera. Please check permissions.");
+    }
+  };
+
+  const stopWebcam = () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+    setShowWebcam(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
+
+      if (context) {
+        // Set canvas dimensions to match video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        // Draw video frame to canvas
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert canvas to blob and then to file
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], "webcam-capture.jpg", {
+              type: "image/jpeg",
+            });
+            setSelectedImage(file);
+
+            // Create preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              if (e.target?.result && typeof e.target.result === "string") {
+                setImagePreview(e.target.result);
+              }
+            };
+            reader.readAsDataURL(file);
+
+            // Stop webcam after capture
+            stopWebcam();
+          }
+        }, "image/jpeg", 0.95);
+      }
+    }
+  };
+
+  // Cleanup webcam on unmount
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [stream]);
 
   const saveAnalysisToHistory = async (analysisResult: AnalysisResults) => {
     if (!currentUser) return;
+
+    // Import health history manager
+    const { healthHistoryManager } = await import("../utils/healthHistoryManager");
+    const { reminderManager } = await import("../utils/reminderManager");
+
+    // Save to health history
+    const scan = {
+      id: `scan_${Date.now()}`,
+      timestamp: new Date(),
+      cropType: analysisResult.plantType,
+      fieldSection: "default", // TODO: Let user select field section
+      isHealthy: analysisResult.isHealthy,
+      detectedDisease: analysisResult.detectedDisease,
+      severity: analysisResult.severity,
+      confidence: analysisResult.confidence,
+      treatment: analysisResult.treatment,
+      observations: analysisResult.observations,
+      weatherConditions: analysisResult.currentWeather
+        ? {
+            temperature: analysisResult.currentWeather.temperature,
+            humidity: analysisResult.currentWeather.humidity,
+            description: analysisResult.currentWeather.description,
+          }
+        : undefined,
+    };
+
+    healthHistoryManager.addScan(currentUser.id, scan);
+
+    // Create smart reminders if disease detected
+    if (!analysisResult.isHealthy && analysisResult.treatment?.immediate) {
+      // Create immediate treatment reminder
+      reminderManager.createTreatmentReminder(
+        currentUser.id,
+        analysisResult.plantType,
+        analysisResult.detectedDisease || "Disease",
+        analysisResult.treatment.immediate,
+        0 // Immediate
+      );
+
+      // Create rescan reminder (7 days after treatment)
+      reminderManager.createRescanReminder(
+        currentUser.id,
+        analysisResult.plantType,
+        scan.id,
+        7
+      );
+    }
+
+    // Generate weather-based reminders
+    if (analysisResult.currentWeather && currentUser.cropTypes) {
+      reminderManager.generateWeatherBasedReminders(
+        currentUser.id,
+        analysisResult.currentWeather,
+        currentUser.cropTypes
+      );
+    }
 
     // Get weather data for the analysis
     let weatherConditions;
@@ -473,6 +615,12 @@ export default function Home() {
               </div>
               <button
                 className={styles.dashboardBtn}
+                onClick={() => (window.location.href = "/crop-advisor")}
+              >
+                Crop Advisor
+              </button>
+              <button
+                className={styles.dashboardBtn}
                 onClick={goToDashboard}
               >
                 Dashboard
@@ -489,23 +637,6 @@ export default function Home() {
 
         <main className={styles.main}>
           <div className={styles.hero}>
-            <div className={styles.heroContent}>
-              <h1 className={styles.heroTitle}>
-                Whatever crop you <br />
-                <span className={styles.highlight}>wanna protect</span> <br />
-                and whatever <br />
-                disease you want <br />
-                <span className={styles.detectText}>to detect</span>
-              </h1>
-              <p className={styles.subtitle}>
-                DO IT WITH OUR way with our guided AI detection programme
-              </p>
-              <p className={styles.description}>
-                Try it now, powered by advanced AI technology for real-time crop
-                analysis
-              </p>
-            </div>
-
             <div className={styles.analysisCard}>
               <div className={styles.cardHeader}>
                 <div className={styles.statusIndicator}>
@@ -515,7 +646,30 @@ export default function Home() {
               </div>
 
               <div className={styles.uploadArea}>
-                {imagePreview ? (
+                {showWebcam ? (
+                  <div className={styles.webcamContainer}>
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      className={styles.webcamVideo}
+                    />
+                    <div className={styles.webcamActions}>
+                      <button
+                        className={styles.captureBtn}
+                        onClick={capturePhoto}
+                      >
+                        📷 Capture Photo
+                      </button>
+                      <button
+                        className={styles.cancelWebcamBtn}
+                        onClick={stopWebcam}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : imagePreview ? (
                   <div className={styles.imagePreview}>
                     <img src={imagePreview} alt="Selected crop" />
                     <div className={styles.imageActions}>
@@ -534,15 +688,26 @@ export default function Home() {
                     </div>
                   </div>
                 ) : (
-                  <div
-                    className={styles.uploadPlaceholder}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <div className={styles.uploadIcon}>📸</div>
-                    <p>Click to upload crop image</p>
-                    <p className={styles.uploadHint}>
-                      Support JPG, PNG, WEBP formats (max 10MB)
-                    </p>
+                  <div>
+                    <div
+                      className={styles.uploadPlaceholder}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <div className={styles.uploadIcon}>📸</div>
+                      <p>Click to upload crop image</p>
+                      <p className={styles.uploadHint}>
+                        Support JPG, PNG, WEBP formats (max 10MB)
+                      </p>
+                    </div>
+                    <div className={styles.orDivider}>
+                      <span>OR</span>
+                    </div>
+                    <button
+                      className={styles.webcamBtn}
+                      onClick={startWebcam}
+                    >
+                      📷 Use Camera
+                    </button>
                   </div>
                 )}
 
@@ -555,6 +720,7 @@ export default function Home() {
                   aria-label="Upload crop image for analysis"
                   title="Select an image file to analyze for crop diseases"
                 />
+                <canvas ref={canvasRef} style={{ display: "none" }} />
               </div>
 
               <button
@@ -567,10 +733,10 @@ export default function Home() {
                 {analyzing ? (
                   <>
                     <span className={styles.spinner}></span>
-                    AI Analyzing...
+                    Analyzing...
                   </>
                 ) : (
-                  "🔍 Analyze Crop Health with AI"
+                  "Analyze"
                 )}
               </button>
 

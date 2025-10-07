@@ -677,14 +677,19 @@ export default function SchedulePage() {
                     required
                   >
                     <option value="">Select crop type</option>
+                    <option value="Apple">Apple</option>
+                    <option value="Bell pepper">Bell pepper</option>
+                    <option value="Blueberry">Blueberry</option>
+                    <option value="Cherry">Cherry</option>
                     <option value="Corn">Corn</option>
-                    <option value="Wheat">Wheat</option>
-                    <option value="Soybeans">Soybeans</option>
-                    <option value="Rice">Rice</option>
-                    <option value="Tomatoes">Tomatoes</option>
-                    <option value="Potatoes">Potatoes</option>
-                    <option value="Cotton">Cotton</option>
-                    <option value="Sunflower">Sunflower</option>
+                    <option value="Peach">Peach</option>
+                    <option value="Potato">Potato</option>
+                    <option value="Raspberry">Raspberry</option>
+                    <option value="Soybean">Soybean</option>
+                    <option value="Squash">Squash</option>
+                    <option value="Strawberry">Strawberry</option>
+                    <option value="Tomato">Tomato</option>
+                    <option value="Grape">Grape</option>
                   </select>
                 </div>
                 <div className={styles.formGroup}>

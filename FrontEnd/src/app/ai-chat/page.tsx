@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 
 // Dynamically import the TelkomChatbot component to avoid SSR issues
 const TelkomChatbot = dynamic(
-  () => import("../../components/chatAiService/service"),
+  () => import("../components/chatAiService/service"),
   { ssr: false }
 );
 

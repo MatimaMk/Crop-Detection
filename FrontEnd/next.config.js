@@ -3,6 +3,9 @@ const nextConfig = {
   // Required for Google AI integration
   serverExternalPackages: ["@google/generative-ai"],
 
+  // Set the correct workspace root
+  outputFileTracingRoot: require('path').join(__dirname),
+
   // Security and CORS headers for API routes
   async headers() {
     return [

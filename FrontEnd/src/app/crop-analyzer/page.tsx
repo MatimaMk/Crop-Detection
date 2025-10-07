@@ -280,13 +280,17 @@ export default function Home() {
     const scan = {
       id: `scan_${Date.now()}`,
       timestamp: new Date(),
-      cropType: analysisResult.plantType,
+      cropType: analysisResult.plantType || "Unknown",
       fieldSection: "default", // TODO: Let user select field section
       isHealthy: analysisResult.isHealthy,
-      detectedDisease: analysisResult.detectedDisease,
-      severity: analysisResult.severity,
-      confidence: analysisResult.confidence,
-      treatment: analysisResult.treatment,
+      detectedDisease: analysisResult.detectedDisease || null,
+      severity: analysisResult.severity || "none",
+      confidence: analysisResult.confidence || 0,
+      treatment: analysisResult.treatment ? {
+        immediate: analysisResult.treatment.immediate,
+        prevention: analysisResult.treatment.prevention,
+        followUp: analysisResult.treatment.followUp || "No follow-up needed"
+      } : undefined,
       observations: analysisResult.observations,
       weatherConditions: analysisResult.currentWeather
         ? {
@@ -304,7 +308,7 @@ export default function Home() {
       // Create immediate treatment reminder
       reminderManager.createTreatmentReminder(
         currentUser.id,
-        analysisResult.plantType,
+        analysisResult.plantType || "Unknown",
         analysisResult.detectedDisease || "Disease",
         analysisResult.treatment.immediate,
         0 // Immediate
@@ -313,7 +317,7 @@ export default function Home() {
       // Create rescan reminder (7 days after treatment)
       reminderManager.createRescanReminder(
         currentUser.id,
-        analysisResult.plantType,
+        analysisResult.plantType || "Unknown",
         scan.id,
         7
       );

@@ -294,6 +294,7 @@ export async function POST(request: NextRequest) {
       farmSize: farmSize,
       currentWeather: weatherData,
       timestamp: new Date().toISOString(),
+      whatsappSent: false,
     };
 
     // Send WhatsApp notification if disease detected and phone number provided
@@ -353,7 +354,7 @@ async function getCurrentWeather(location: string) {
     // Use a direct API key for OpenWeather (replace with your own)
     const OPENWEATHER_API_KEY = "be44b26d4e6a960fe5e06a50eced870b";
 
-    if (!location || !OPENWEATHER_API_KEY || OPENWEATHER_API_KEY === "your_openweather_api_key_here") {
+    if (!location || !OPENWEATHER_API_KEY) {
       console.warn("Weather API unavailable: Missing location or API key");
       return null;
     }

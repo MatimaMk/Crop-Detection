@@ -1,9 +1,10 @@
-// pages/index.tsx
+"use client";
+
 import { useState, useRef, useEffect } from "react";
 import Head from "next/head";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import jsPDF from "jspdf";
-import styles from "../styles/Chatbot.module.css";
+import styles from "./style/service.module.css";
 
 interface Message {
   id: string;
@@ -12,18 +13,22 @@ interface Message {
   timestamp: Date;
 }
 
-interface TelkomData {
-  fiber: string[];
-  mobile: string[];
-  support: string[];
-  general: string[];
+interface Farmer {
+  id: string;
+  name: string;
+  email: string;
+  farmName: string;
+  location: string;
+  farmSize: number;
+  cropTypes: string[];
+  experienceYears: number;
 }
 
-export default function TelkomChatbot() {
+export default function CropAdvisorChatbot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      text: "Hello! I'm your Telkom AI Assistant powered by advanced AI. I have access to the latest Telkom information from our official websites. How can I help you today?",
+      text: "Hello! I'm your CropGuard AI Advisor. I'm here to help you with everything about growing and caring for your crops - from planting to harvest. Ask me anything about crop care, watering schedules, pest control, disease prevention, soil management, or any other farming advice you need!",
       sender: "bot",
       timestamp: new Date(),
     },
@@ -31,12 +36,7 @@ export default function TelkomChatbot() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [telkomKnowledge, setTelkomKnowledge] = useState<TelkomData>({
-    fiber: [],
-    mobile: [],
-    support: [],
-    general: [],
-  });
+  const [currentUser, setCurrentUser] = useState<Farmer | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,116 +44,69 @@ export default function TelkomChatbot() {
   }, [messages]);
 
   useEffect(() => {
-    // Load Telkom knowledge base on component mount
-    loadTelkomKnowledge();
+    // Load user data from localStorage
+    const userData = localStorage.getItem("currentUser");
+    if (userData) {
+      const user = JSON.parse(userData);
+      setCurrentUser(user);
+    }
   }, []);
-
-  const loadTelkomKnowledge = async () => {
-    // Since we can't directly scrape in browser, we'll use a comprehensive knowledge base
-    // based on typical Telkom services and information
-    const telkomData: TelkomData = {
-      fiber: [
-        "Telkom Fiber offers various uncapped packages:",
-        "• 10Mbps Uncapped from R399/month with 100GB Night Surfer",
-        "• 25Mbps Uncapped from R599/month with 200GB Night Surfer",
-        "• 50Mbps Uncapped from R899/month with 300GB Night Surfer",
-        "• 100Mbps Uncapped from R1299/month with 500GB Night Surfer",
-        "• All packages include free installation and WiFi router",
-        "• Coverage available in major metros and expanding to smaller towns",
-        "• 24-month contracts with early termination fees apply",
-        "• Speed tests available at speedtest.telkom.co.za",
-      ],
-      mobile: [
-        "Telkom Mobile packages include:",
-        "• SmartChoice Flexi plans starting from R99/month",
-        "• FreeMe packages with unlimited calls and WhatsApp",
-        "• FreeMe 1GB from R199/month with 120 min calls",
-        "• FreeMe 2GB from R299/month with 240 min calls",
-        "• FreeMe 5GB from R499/month with 600 min calls",
-        "• Prepaid options starting from R2/day",
-        "• Business mobile solutions with bulk discounts",
-        "• 4G and 5G network coverage in major areas",
-        "• International roaming available",
-      ],
-      support: [
-        "Telkom Customer Support options:",
-        "• Customer Care: 10210 (available 24/7)",
-        "• Technical Support: 081 180 or 10210",
-        "• Sales enquiries: 081 180",
-        "• Account management via telkom.co.za",
-        "• Telkom mobile app available for iOS and Android",
-        "• Live chat support on website",
-        "• Social media support @TelkomZA",
-        "• Self-service options: *180# for mobile",
-        "• Network status updates at telkom.co.za/network-status",
-      ],
-      general: [
-        "General Telkom information:",
-        "• South Africa's leading telecommunications provider",
-        "• Services include fiber, mobile, fixed-line, and business solutions",
-        "• Major network infrastructure across South Africa",
-        "• Digital services including cloud and cybersecurity",
-        "• Multiple payment options: debit orders, online, stores, ATM",
-        "• Student and pensioner discounts available on select packages",
-        "• Business solutions for SMEs and enterprise customers",
-        "• Network expansion ongoing in rural areas",
-        "• Environmental sustainability initiatives in operations",
-      ],
-    };
-
-    setTelkomKnowledge(telkomData);
-  };
 
   const generateResponse = async (userMessage: string): Promise<string> => {
     try {
-      // Initialize Gemini AI with the provided API key
-      const genAI = new GoogleGenerativeAI(
-        "AIzaSyBxM9lp3-3_mifpdppt66AlhWAPcLUd90k"
-      );
+      const genAI = new GoogleGenerativeAI("AIzaSyBxM9lp3-3_mifpdppt66AlhWAPcLUd90k");
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
-      // Create comprehensive context from Telkom knowledge base
-      const telkomContext = `
-        You are an official Telkom South Africa AI customer service assistant. Use the following official information from Telkom websites (telkom.co.za and telkomsa.net):
+      const cropContext = `
+        You are an expert agricultural advisor specializing in crop disease detection and farm management for CropGuard AI.
 
-        FIBER SERVICES:
-        ${telkomKnowledge.fiber.join("\n")}
+        ${currentUser ? `
+        FARMER PROFILE:
+        - Name: ${currentUser.name}
+        - Farm: ${currentUser.farmName}
+        - Location: ${currentUser.location}
+        - Farm Size: ${currentUser.farmSize} hectares
+        - Crops: ${currentUser.cropTypes.join(", ")}
+        - Experience: ${currentUser.experienceYears} years
+        ` : ''}
 
-        MOBILE SERVICES:
-        ${telkomKnowledge.mobile.join("\n")}
-
-        CUSTOMER SUPPORT:
-        ${telkomKnowledge.support.join("\n")}
-
-        GENERAL INFORMATION:
-        ${telkomKnowledge.general.join("\n")}
+        YOUR EXPERTISE INCLUDES:
+        - Crop disease identification and treatment (Apple, Bell pepper, Blueberry, Cherry, Corn, Peach, Potato, Raspberry, Soybean, Squash, Strawberry, Tomato, Grape)
+        - Pest control and prevention
+        - Soil health and nutrition management
+        - Irrigation and watering schedules
+        - Planting calendars and crop rotation
+        - Harvesting techniques and timing
+        - Weather-based farming advice
+        - Organic and sustainable farming practices
+        - Fertilizer recommendations
+        - Crop-specific care instructions
 
         INSTRUCTIONS:
-        - Always provide accurate, helpful, and professional responses
-        - Use the official Telkom information provided above
-        - For billing queries, direct users to call 10210 or use telkom.co.za
-        - For technical issues, provide troubleshooting steps and escalation options
-        - Always maintain a friendly, professional tone
-        - If you don't have specific information, direct users to official Telkom channels
-        - Include relevant contact numbers and website references
-        - Provide specific pricing and package details when available
+        - Provide practical, actionable advice for farmers
+        - Use simple, clear language
+        - Include specific measurements and timings when relevant
+        - Prioritize sustainable and cost-effective solutions
+        - Consider South African farming conditions
+        - If discussing diseases, mention symptoms, causes, and treatments
+        - Always be supportive and encouraging
+        - Provide step-by-step guidance when needed
       `;
 
-      const prompt = `${telkomContext}\n\nCustomer query: ${userMessage}\n\nPlease provide a helpful, accurate response based on the Telkom information provided.`;
+      const prompt = `${cropContext}\n\nFarmer's question: ${userMessage}\n\nProvide helpful agricultural advice:`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
       return response.text();
     } catch (error) {
       console.error("Error generating response:", error);
-      return `I apologize, but I'm experiencing some technical difficulties right now. For immediate assistance, please:
-      
-• Call our customer care line at 10210 (24/7)
-• Visit telkom.co.za for self-service options
-• Use the Telkom mobile app
-• Visit your nearest Telkom store
+      return `I apologize, but I'm experiencing technical difficulties right now. Please try again in a moment. In the meantime, you can:
 
-Our technical team will have this resolved shortly. Thank you for your patience.`;
+• Check your crop analysis history in the dashboard
+• Schedule a crop scan
+• Review your farm activities
+
+I'll be back to help you shortly!`;
     }
   };
 
@@ -182,14 +135,12 @@ Our technical team will have this resolved shortly. Thank you for your patience.
       };
 
       setMessages((prev) => [...prev, botMessage]);
-
-      // Read response aloud
       speakText(botResponse);
     } catch (error) {
       console.error("Error:", error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: "I apologize for the technical difficulty. Please try again or contact Telkom directly at 10210.",
+        text: "I apologize for the technical difficulty. Please try again.",
         sender: "bot",
         timestamp: new Date(),
       };
@@ -201,21 +152,18 @@ Our technical team will have this resolved shortly. Thank you for your patience.
 
   const speakText = (text: string) => {
     if ("speechSynthesis" in window) {
-      // Stop any current speech
       speechSynthesis.cancel();
 
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.8;
+      utterance.rate = 0.9;
       utterance.pitch = 1;
       utterance.volume = 0.8;
-      utterance.lang = "en-ZA"; // South African English
+      utterance.lang = "en-US";
 
-      // Use a more natural voice if available
       const voices = speechSynthesis.getVoices();
       const preferredVoice = voices.find(
         (voice) =>
-          voice.lang.includes("en-ZA") ||
-          voice.lang.includes("en-GB") ||
+          voice.lang.includes("en-") &&
           voice.name.toLowerCase().includes("female")
       );
 
@@ -236,44 +184,35 @@ Our technical team will have this resolved shortly. Thank you for your patience.
 
       recognition.continuous = false;
       recognition.interimResults = false;
-      recognition.lang = "en-ZA"; // South African English
+      recognition.lang = "en-US";
 
       recognition.onstart = () => {
         setIsListening(true);
-        console.log("Voice recognition started");
       };
 
       recognition.onend = () => {
         setIsListening(false);
-        console.log("Voice recognition ended");
       };
 
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
-        console.log("Recognized:", transcript);
         setInput(transcript);
       };
 
       recognition.onerror = (event: any) => {
         setIsListening(false);
-        console.error("Speech recognition error:", event.error);
-
         let errorMessage = "Speech recognition error. Please try again.";
         if (event.error === "not-allowed") {
-          errorMessage =
-            "Microphone access denied. Please enable microphone permissions.";
+          errorMessage = "Microphone access denied. Please enable microphone permissions.";
         } else if (event.error === "no-speech") {
           errorMessage = "No speech detected. Please try again.";
         }
-
         alert(errorMessage);
       };
 
       recognition.start();
     } else {
-      alert(
-        "Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari."
-      );
+      alert("Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.");
     }
   };
 
@@ -283,40 +222,30 @@ Our technical team will have this resolved shortly. Thank you for your patience.
     const pageWidth = pdf.internal.pageSize.width;
     let yPosition = 20;
 
-    // Add Telkom header
+    // Header
     pdf.setFontSize(20);
-    pdf.setTextColor(0, 102, 204); // Telkom blue
-    pdf.text("Telkom Customer Service Chat", 20, yPosition);
-
-    // Add Telkom logo placeholder (you can replace with actual logo)
-    pdf.setFontSize(12);
-    pdf.setTextColor(0, 102, 204);
-    pdf.text("T", pageWidth - 30, yPosition);
+    pdf.setTextColor(22, 163, 74); // Green
+    pdf.text("CropGuard AI - Crop Advisor Chat", 20, yPosition);
 
     yPosition += 25;
     pdf.setFontSize(11);
     pdf.setTextColor(0, 0, 0);
-    pdf.text(
-      `Generated: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
-      20,
-      yPosition
-    );
-    pdf.text(`Total Messages: ${messages.length}`, 20, yPosition + 10);
+    pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPosition);
+    pdf.text(`Farmer: ${currentUser?.name || 'Unknown'}`, 20, yPosition + 7);
+    pdf.text(`Farm: ${currentUser?.farmName || 'Unknown'}`, 20, yPosition + 14);
 
-    yPosition += 25;
+    yPosition += 30;
 
-    // Add separator line
+    // Separator
     pdf.setLineWidth(0.5);
-    pdf.setDrawColor(0, 102, 204);
+    pdf.setDrawColor(22, 163, 74);
     pdf.line(20, yPosition, pageWidth - 20, yPosition);
     yPosition += 15;
 
     messages.forEach((message, index) => {
-      const sender =
-        message.sender === "user" ? "Customer" : "Telkom Assistant";
+      const sender = message.sender === "user" ? "You" : "CropGuard AI";
       const time = message.timestamp.toLocaleTimeString();
 
-      // Check if we need a new page
       if (yPosition > pageHeight - 80) {
         pdf.addPage();
         yPosition = 20;
@@ -333,13 +262,11 @@ Our technical team will have this resolved shortly. Thank you for your patience.
       pdf.setFontSize(9);
       pdf.setTextColor(0, 0, 0);
 
-      // Split long text into multiple lines
       const splitText = pdf.splitTextToSize(message.text, pageWidth - 40);
       pdf.text(splitText, 20, yPosition);
 
       yPosition += splitText.length * 4 + 15;
 
-      // Add subtle separator between messages
       if (index < messages.length - 1) {
         pdf.setLineWidth(0.1);
         pdf.setDrawColor(200, 200, 200);
@@ -347,69 +274,58 @@ Our technical team will have this resolved shortly. Thank you for your patience.
       }
     });
 
-    // Add footer
+    // Footer
     const footerY = pageHeight - 15;
     pdf.setFontSize(8);
     pdf.setTextColor(102, 102, 102);
-    pdf.text(
-      "Telkom AI Assistant - For official support: 10210 | www.telkom.co.za",
-      20,
-      footerY
-    );
-    pdf.text(`Page 1 of ${pdf.getNumberOfPages()}`, pageWidth - 40, footerY);
+    pdf.text("CropGuard AI - Your Agricultural Assistant", 20, footerY);
 
-    const filename = `telkom-chat-${
-      new Date().toISOString().split("T")[0]
-    }-${new Date().getTime()}.pdf`;
+    const filename = `cropguard-chat-${new Date().toISOString().split("T")[0]}.pdf`;
     pdf.save(filename);
   };
 
   const quickActions = [
     {
-      text: "What fiber packages do you currently offer and what are the prices?",
-      label: "Fiber Packages",
-      desc: "View current internet plans and pricing",
+      text: "How do I identify and treat early blight in tomatoes?",
+      label: "Disease Treatment",
+      desc: "Get help with crop diseases",
     },
     {
-      text: "How can I check my Telkom account balance and usage?",
-      label: "Account Balance",
-      desc: "Check balance and data usage",
+      text: "What's the best watering schedule for my crops?",
+      label: "Watering Guide",
+      desc: "Learn optimal irrigation practices",
     },
     {
-      text: "I'm experiencing slow internet speeds and connection issues",
-      label: "Technical Support",
-      desc: "Get help with connectivity problems",
+      text: "When is the best time to plant corn in South Africa?",
+      label: "Planting Calendar",
+      desc: "Seasonal planting advice",
     },
     {
-      text: "What mobile packages and deals are available right now?",
-      label: "Mobile Plans",
-      desc: "Explore mobile packages and offers",
+      text: "How can I improve my soil quality naturally?",
+      label: "Soil Health",
+      desc: "Organic soil management tips",
     },
     {
-      text: "How do I contact customer service and what are the operating hours?",
-      label: "Contact Info",
-      desc: "Get contact details and support hours",
+      text: "What are the signs of nutrient deficiency in my crops?",
+      label: "Nutrient Guide",
+      desc: "Identify and fix deficiencies",
     },
     {
-      text: "What payment methods do you accept and how do I pay my bill?",
-      label: "Billing & Payments",
-      desc: "Payment options and billing help",
+      text: "How do I protect my crops from pests organically?",
+      label: "Pest Control",
+      desc: "Natural pest management",
     },
   ];
 
   return (
     <>
       <Head>
-        <title>Telkom AI Assistant - Powered by Gemini 2.0</title>
+        <title>CropGuard AI Advisor - Agricultural Chat Assistant</title>
         <meta
           name="description"
-          content="Official AI-powered customer service for Telkom customers using advanced Gemini 2.0 Flash technology"
+          content="AI-powered agricultural advisor for crop disease management and farm optimization"
         />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta
-          name="keywords"
-          content="Telkom, AI, customer service, fiber, mobile, support, South Africa"
-        />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
@@ -419,15 +335,16 @@ Our technical team will have this resolved shortly. Thank you for your patience.
           <div className={styles.headerContent}>
             <div className={styles.headerLeft}>
               <div className={styles.logo}>
-                <span>T</span>
+                <span>🌱</span>
               </div>
               <div className={styles.headerText}>
-                <h1>Telkom AI Assistant</h1>
-                <p>Powered by Gemini 2.0 Flash • Connected to telkom.co.za</p>
+                <h1>CropGuard AI Advisor</h1>
+                <p>Powered by Gemini 2.0 • Expert Agricultural Guidance</p>
               </div>
             </div>
             <div className={styles.headerActions}>
               <button
+                type="button"
                 onClick={downloadPDF}
                 className={styles.downloadBtn}
                 title="Download conversation as PDF"
@@ -475,9 +392,7 @@ Our technical team will have this resolved shortly. Thank you for your patience.
               ))}
 
               {isLoading && (
-                <div
-                  className={`${styles.messageWrapper} ${styles.botMessage}`}
-                >
+                <div className={`${styles.messageWrapper} ${styles.botMessage}`}>
                   <div className={styles.messageBubble}>
                     <div className={styles.typingIndicator}>
                       <div className={styles.typingDots}>
@@ -504,12 +419,13 @@ Our technical team will have this resolved shortly. Thank you for your patience.
                   onKeyPress={(e) =>
                     e.key === "Enter" && !isLoading && handleSendMessage()
                   }
-                  placeholder="Ask me anything about Telkom services..."
+                  placeholder="Ask me about crops, diseases, pests, soil, or farming techniques..."
                   className={styles.messageInput}
                   disabled={isLoading}
                 />
 
                 <button
+                  type="button"
                   onClick={startListening}
                   disabled={isListening || isLoading}
                   className={`${styles.voiceBtn} ${
@@ -533,6 +449,7 @@ Our technical team will have this resolved shortly. Thank you for your patience.
                 </button>
 
                 <button
+                  type="button"
                   onClick={handleSendMessage}
                   disabled={!input.trim() || isLoading}
                   className={styles.sendBtn}
@@ -556,8 +473,7 @@ Our technical team will have this resolved shortly. Thank you for your patience.
 
               <div className={styles.footerText}>
                 <p>
-                  Powered by Google Gemini 2.0 Flash • For urgent matters, call{" "}
-                  <strong>10210</strong>
+                  Powered by Google Gemini 2.0 • Expert Agricultural Advice
                 </p>
               </div>
             </div>
@@ -568,6 +484,7 @@ Our technical team will have this resolved shortly. Thank you for your patience.
             {quickActions.map((action, index) => (
               <button
                 key={index}
+                type="button"
                 onClick={() => setInput(action.text)}
                 className={styles.quickActionBtn}
                 disabled={isLoading}

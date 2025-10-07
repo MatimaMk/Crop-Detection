@@ -1009,10 +1009,19 @@ export default function Dashboard() {
             </button>
             <button
               className={styles.headerButton}
-              onClick={() => setShowProfileModal(true)}
-              aria-label="Open settings"
+              onClick={() => (window.location.href = "/settings")}
+              aria-label="Notification settings"
+              title="Notification Settings"
             >
               <Settings className="w-5 h-5" />
+            </button>
+            <button
+              className={styles.headerButton}
+              onClick={() => setShowProfileModal(true)}
+              aria-label="Open profile"
+              title="Profile Settings"
+            >
+              <User className="w-5 h-5" />
             </button>
             <button onClick={handleLogout} className={styles.logoutButton}>
               Logout

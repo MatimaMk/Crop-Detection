@@ -1411,7 +1411,7 @@
 
 .trendsContainer {
   display: flex;
-  align-items: end;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 8px;
   height: 200px;
@@ -1570,7 +1570,7 @@
 
 .monthlyChart {
   display: flex;
-  align-items: end;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
   height: 200px;

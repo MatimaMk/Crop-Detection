@@ -54,8 +54,8 @@ export default function CropAdvisorChatbot() {
 
   const generateResponse = async (userMessage: string): Promise<string> => {
     try {
-      const genAI = new GoogleGenerativeAI("AIzaSyBxM9lp3-3_mifpdppt66AlhWAPcLUd90k");
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+      const genAI = new GoogleGenerativeAI("AIzaSyDrxyuVNOH80GjD53qJiKrGHSvcwrlQ5D0");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const cropContext = `
         You are an expert agricultural advisor specializing in crop disease detection and farm management for CropGuard AI.
@@ -339,7 +339,7 @@ I'll be back to help you shortly!`;
               </div>
               <div className={styles.headerText}>
                 <h1>CropGuard AI Advisor</h1>
-                <p>Powered by Gemini 2.0 • Expert Agricultural Guidance</p>
+                <p>Powered by Gemini 2.5 • Expert Agricultural Guidance</p>
               </div>
             </div>
             <div className={styles.headerActions}>
@@ -473,7 +473,7 @@ I'll be back to help you shortly!`;
 
               <div className={styles.footerText}>
                 <p>
-                  Powered by Google Gemini 2.0 • Expert Agricultural Advice
+                  Powered by Google Gemini 2.5 • Expert Agricultural Advice
                 </p>
               </div>
             </div>

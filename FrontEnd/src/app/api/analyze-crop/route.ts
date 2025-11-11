@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize Google Generative AI with direct API key
-const genAI = new GoogleGenerativeAI("AIzaSyDefMd3KBOFKGchBK9AoVZgQ45aiqbnPQ8");
+const genAI = new GoogleGenerativeAI("AIzaSyDrxyuVNOH80GjD53qJiKrGHSvcwrlQ5D0");
 
 // Supported crops and their diseases
 const CROP_DISEASE_MAP: Record<string, string[]> = {
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     const weatherData = await getCurrentWeather(userLocation);
 
     // Get the generative model
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // First, validate that the image is a plant/crop
     const validationPrompt = `

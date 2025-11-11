@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize Google Generative AI
-const genAI = new GoogleGenerativeAI("AIzaSyDefMd3KBOFKGchBK9AoVZgQ45aiqbnPQ8");
+const genAI = new GoogleGenerativeAI("AIzaSyDrxyuVNOH80GjD53qJiKrGHSvcwrlQ5D0");
 
 // Supported crops
 const SUPPORTED_CROPS = [
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the generative model
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // Create comprehensive crop advisor prompt
     const prompt = `

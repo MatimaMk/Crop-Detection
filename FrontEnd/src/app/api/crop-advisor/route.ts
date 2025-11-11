@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the generative model
+    // Get the generative model of flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // Create comprehensive crop advisor prompt the promt

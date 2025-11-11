@@ -6,8 +6,19 @@ const genAI = new GoogleGenerativeAI("AIzaSyDrxyuVNOH80GjD53qJiKrGHSvcwrlQ5D0");
 
 // Supported crops
 const SUPPORTED_CROPS = [
-  "Apple", "Bell pepper", "Blueberry", "Cherry", "Corn", "Peach",
-  "Potato", "Raspberry", "Soybean", "Squash", "Strawberry", "Tomato", "Grape"
+  "Apple",
+  "Bell pepper",
+  "Blueberry",
+  "Cherry",
+  "Corn",
+  "Peach",
+  "Potato",
+  "Raspberry",
+  "Soybean",
+  "Squash",
+  "Strawberry",
+  "Tomato",
+  "Grape",
 ];
 
 export async function POST(request: NextRequest) {
@@ -33,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Get the generative model
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    // Create comprehensive crop advisor prompt
+    // Create comprehensive crop advisor prompt the promt
     const prompt = `
       You are an expert agricultural advisor specializing in crop cultivation and lifecycle management. You are providing personalized advice to ${userName} from ${farmName} farm.
 

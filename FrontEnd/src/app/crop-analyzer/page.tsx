@@ -147,6 +147,9 @@ export default function Home() {
         if (errorData.error === "Invalid image type") {
           throw new Error(errorData.message || "Please upload a valid plant or crop image.");
         }
+        if (errorData.error === "Unknown plant detected") {
+          throw new Error(errorData.message || "Unknown plant");
+        }
         throw new Error(errorData.error || "Analysis failed");
       }
 
@@ -167,8 +170,8 @@ export default function Home() {
       const errorMessage = err instanceof Error ? err.message : "Failed to analyze image. Please try again.";
       setError(errorMessage);
 
-      // If it's an invalid image type error, clear the selected image
-      if (errorMessage.includes("plant or crop")) {
+      // If it's an invalid image type or unknown plant error, clear the selected image
+      if (errorMessage.includes("plant or crop") || errorMessage.includes("supported crops")) {
         setSelectedImage(null);
         setImagePreview(null);
       }

@@ -81,26 +81,36 @@ export async function POST(request: NextRequest) {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // First, validate that the image is a plant/crop
+    const supportedCropsList = Object.keys(CROP_DISEASE_MAP).join(", ");
+
     const validationPrompt = `
       Analyze this image and determine if it shows a plant, crop, or vegetation.
+
+      SUPPORTED CROPS IN OUR SYSTEM:
+      ${supportedCropsList}
 
       Respond with ONLY a JSON object in this exact format:
       {
         "isPlant": true/false,
+        "isDefinedCrop": true/false,
+        "identifiedPlant": "name of the plant/crop if recognizable",
         "reason": "brief explanation"
       }
 
-      Return true only if the image shows:
+      Return isPlant=true only if the image shows:
       - Living plants, crops, or vegetation
       - Plant leaves, stems, flowers, or fruits
       - Agricultural crops or garden plants
 
-      Return false if the image shows:
+      Return isPlant=false if the image shows:
       - Animals, people, or objects
       - Buildings, vehicles, or infrastructure
       - Food products that are not plants
       - Non-plant materials
       - Abstract or unclear images
+
+      Return isDefinedCrop=true ONLY if the plant matches one of the supported crops listed above.
+      Set identifiedPlant to the plant name you recognize (even if not in supported list).
     `;
 
     const validationResult = await model.generateContent([
@@ -128,7 +138,7 @@ export async function POST(request: NextRequest) {
     } catch (parseError) {
       console.error("Failed to parse validation response:", parseError);
       // Default to allowing the image if validation fails
-      validationData = { isPlant: true, reason: "Validation inconclusive" };
+      validationData = { isPlant: true, isDefinedCrop: true, reason: "Validation inconclusive" };
     }
 
     // If not a plant, reject the analysis
@@ -138,6 +148,20 @@ export async function POST(request: NextRequest) {
           error: "Invalid image type",
           message: "Please upload an image of a plant or crop. The provided image does not appear to contain plant material.",
           reason: validationData.reason,
+        },
+        { status: 400 }
+      );
+    }
+
+    // If it's a plant but not in our defined crop list, return unknown plant message
+    if (validationData.isPlant && !validationData.isDefinedCrop) {
+      return NextResponse.json(
+        {
+          error: "Unknown plant detected",
+          message: "Unknown plant",
+          identifiedPlant: validationData.identifiedPlant || "Unrecognized plant",
+          reason: validationData.reason,
+          supportedCrops: Object.keys(CROP_DISEASE_MAP),
         },
         { status: 400 }
       );

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize Google Generative AI with direct API key
-const genAI = new GoogleGenerativeAI("AIzaSyATleY2y9ckuNs9ALgL6XIAjFwwLBLzOa8");
+// Initialize Google Generative AI with environment variable
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || "");
 
 // Supported crops and their diseases
 const CROP_DISEASE_MAP: Record<string, string[]> = {
